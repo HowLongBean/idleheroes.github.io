@@ -256,12 +256,19 @@
 
         function updateTotal(e) {
             overallTotal = 0;
+            const seenShared = new Set();
             const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
             checkboxes.forEach(checkbox => {
-                overallTotal += parseInt(checkbox.dataset.value);
+                const isShared = checkbox.dataset && checkbox.dataset.shared === 'true';
+                if (isShared) {
+                    const key = `${checkbox.dataset.treeUid}_${checkbox.dataset.nodeIndex}`;
+                    if (seenShared.has(key)) return; // already counted this shared node for this tree
+                    seenShared.add(key);
+                }
+                overallTotal += parseInt(checkbox.dataset.value, 10) || 0;
             });
 
-                if (overallTotal > totalLimit) {
+            if (overallTotal > totalLimit) {
                 alert(`Total exceeds limit of ${totalLimit}!`);
                 // revert the triggering change if available
                 if (e && e.target) {
@@ -277,10 +284,17 @@
                     }
                 }
 
-                // Recompute totals after revert
+                // Recompute totals after revert (respecting shared uniqueness)
                 overallTotal = 0;
+                const seenAfterRevert = new Set();
                 document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
-                    overallTotal += parseInt(checkbox.dataset.value);
+                    const isShared = checkbox.dataset && checkbox.dataset.shared === 'true';
+                    if (isShared) {
+                        const key = `${checkbox.dataset.treeUid}_${checkbox.dataset.nodeIndex}`;
+                        if (seenAfterRevert.has(key)) return;
+                        seenAfterRevert.add(key);
+                    }
+                    overallTotal += parseInt(checkbox.dataset.value, 10) || 0;
                 });
                 document.getElementById('overallTotalDiv').textContent = `Overall Total: ${overallTotal}`;
                 return;
