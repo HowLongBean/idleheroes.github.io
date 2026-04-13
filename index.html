@@ -122,14 +122,38 @@
             checkbox.id = nodeId;
             checkbox.value = value;
             checkbox.dataset.value = value;
+            // identify node position and shared flag
+            checkbox.dataset.nodeIndex = nodeIndex;
+            checkbox.dataset.branchIndex = branchIndex;
+            checkbox.dataset.treeIndex = treeIndex;
+            checkbox.dataset.tableIndex = tableIndex;
+            if (isShared) checkbox.dataset.shared = 'true';
 
             const labelSpan = document.createElement('span');
             labelSpan.className = 'node-label' + (isShared ? ' shared' : '');
             labelSpan.textContent = `${label} (${value}pts)`;
             labelSpan.title = isShared ? 'Shared node (applies to all branches)' : '';
 
-            checkbox.addEventListener('change', function() {
-                updateTotal();
+            checkbox.addEventListener('change', function(e) {
+                // If this is a shared node, propagate the checked state to other shared nodes with same nodeIndex
+                if (isShared) {
+                    const selector = `input[type="checkbox"][data-shared="true"][data-node-index="${nodeIndex}"]`;
+                    document.querySelectorAll(selector).forEach(cb => {
+                        if (cb !== this) cb.checked = this.checked;
+                    });
+                }
+
+                // Enforce ordering within this branch and any affected branches (for shared nodes)
+                if (isShared) {
+                    // enforce all branches containing this shared node
+                    const selector = `div.branch`;
+                    document.querySelectorAll(selector).forEach(branch => enforceOrderForBranch(branch));
+                } else {
+                    const branchDiv = this.closest('.branch');
+                    enforceOrderForBranch(branchDiv);
+                }
+
+                updateTotal(e);
             });
 
             nodeDiv.appendChild(checkbox);
@@ -154,7 +178,30 @@
                 branchDiv.appendChild(createNode(i, tableIndex, treeIndex, branchIndex, isShared));
             }
 
+            // enforce ordering initially for this branch
+            enforceOrderForBranch(branchDiv);
+
             return branchDiv;
+        }
+
+        // Enforce that a node can only be enabled if the previous node is checked
+        function enforceOrderForBranch(branchDiv) {
+            if (!branchDiv) return;
+            const checkboxes = Array.from(branchDiv.querySelectorAll('.node input[type="checkbox"]'));
+            checkboxes.forEach((cb, idx) => {
+                if (idx === 0) {
+                    cb.disabled = false;
+                } else {
+                    const prev = checkboxes[idx - 1];
+                    if (prev && prev.checked) {
+                        cb.disabled = false;
+                    } else {
+                        // if previous is not checked, disable and uncheck this one
+                        cb.checked = false;
+                        cb.disabled = true;
+                    }
+                }
+            });
         }
 
         function createTree(treeIndex, tableIndex) {
@@ -203,7 +250,7 @@
             return tableDiv;
         }
 
-        function updateTotal() {
+        function updateTotal(e) {
             overallTotal = 0;
             const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
             checkboxes.forEach(checkbox => {
@@ -212,8 +259,25 @@
 
             if (overallTotal > totalLimit) {
                 alert(`Total exceeds limit of ${totalLimit}!`);
-                event.target.checked = false;
-                updateTotal();
+                // revert the triggering change if available
+                if (e && e.target) {
+                    e.target.checked = false;
+                    // if shared, revert other shared nodes with same nodeIndex
+                    if (e.target.dataset && e.target.dataset.shared === 'true') {
+                        const nodeIdx = e.target.dataset.nodeIndex;
+                        const selector = `input[type="checkbox"][data-shared="true"][data-node-index="${nodeIdx}"]`;
+                        document.querySelectorAll(selector).forEach(cb => {
+                            if (cb !== e.target) cb.checked = false;
+                        });
+                    }
+                }
+
+                // Recompute totals after revert
+                overallTotal = 0;
+                document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+                    overallTotal += parseInt(checkbox.dataset.value);
+                });
+                document.getElementById('overallTotalDiv').textContent = `Overall Total: ${overallTotal}`;
                 return;
             }
 
