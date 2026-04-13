@@ -76,7 +76,7 @@
     </style>
 </head>
 <body>
-    <h1>Interactive Tree Nodes - v99.0.3</h1>
+    <h1>Interactive Tree Nodes - v99.0.2</h1>
     <div id="tablesContainer"></div>
     <div id="overallTotalDiv" class="overall-total">Overall Total: 0</div>
 
@@ -115,19 +115,22 @@
         //       null,                              // keep default Node 2
         //       ...
         //   ]
-        const nodeOverrides = {'0_0_1': [{ label: 'Alt Root', value: 3 },  // override Node 1
-                                           null,                           // keep default Node 2
-                                           null,                              // keep default Node 3
-                                           null,                              // keep default Node 4
-                                           null,                              // keep default Node 5
-                                           null,                              // keep default Node 6
-                                           null,                              // keep default Node 7
-                                           null,                              // keep default Node 8
-                                           null,                              // keep default Node 9
-                                           null,                              // keep default Node 10
-                                           null,                              // keep default Node 11
-                                           null];                             // keep default Node 12
-                              };
+        const nodeOverrides = {
+            '0_0_1': [
+                { label: 'Alt Root', value: 2 },
+                { label: 'Alt Branch Start', value: 1 },
+                { label: 'Alt Key Node', value: 2 },
+                { label: 'Branch-1 Node 4', value: 1 },
+                null,
+                null,
+                { label: 'Custom Node 7', value: 3 },
+                null,
+                null,
+                null,
+                null,
+                { label: 'Final Node', value: 4 }
+            ]
+        };
 
         // Resolve config for a specific node
         function getNodeConfig(nodeIndex, tableIndex, treeIndex, branchIndex) {
