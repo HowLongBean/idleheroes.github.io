@@ -445,7 +445,46 @@
             
             const branchTitle = document.createElement('div');
             branchTitle.className = 'branch-title';
-            branchTitle.textContent = `Branch ${branchIndex + 1}`;
+
+            const selectAllCb = document.createElement('input');
+            selectAllCb.type = 'checkbox';
+            selectAllCb.style.marginRight = '6px';
+            selectAllCb.style.cursor = 'pointer';
+            selectAllCb.addEventListener('change', function() {
+                const nodeCheckboxes = Array.from(branchDiv.querySelectorAll('.node input[type="checkbox"]'));
+                if (this.checked) {
+                    // Check all nodes in order
+                    nodeCheckboxes.forEach(cb => {
+                        cb.disabled = false;
+                        cb.checked = true;
+                        // Propagate shared nodes
+                        if (cb.dataset.shared === 'true') {
+                            const selector = `input[type="checkbox"][data-shared="true"][data-node-index="${cb.dataset.nodeIndex}"][data-tree-uid="${cb.dataset.treeUid}"]`;
+                            document.querySelectorAll(selector).forEach(other => {
+                                if (other !== cb) other.checked = true;
+                            });
+                        }
+                    });
+                } else {
+                    // Uncheck all nodes in reverse order
+                    [...nodeCheckboxes].reverse().forEach(cb => {
+                        cb.checked = false;
+                        // Propagate shared nodes
+                        if (cb.dataset.shared === 'true') {
+                            const selector = `input[type="checkbox"][data-shared="true"][data-node-index="${cb.dataset.nodeIndex}"][data-tree-uid="${cb.dataset.treeUid}"]`;
+                            document.querySelectorAll(selector).forEach(other => {
+                                if (other !== cb) other.checked = false;
+                            });
+                        }
+                    });
+                }
+                // Re-enforce ordering on all branches (shared nodes may span branches)
+                document.querySelectorAll('div.branch').forEach(b => enforceOrderForBranch(b));
+                updateTotal();
+            });
+
+            branchTitle.appendChild(selectAllCb);
+            branchTitle.appendChild(document.createTextNode(`Branch ${branchIndex + 1}`));
             branchDiv.appendChild(branchTitle);
 
             // Add 11 nodes per branch
