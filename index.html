@@ -84,6 +84,7 @@
         const totalLimit = 66;
         let overallTotal = 0;
         const treeData = [];
+        const tableNames = ['Blade', 'Barrier', 'Mind'];
 
         // ============================================================
         // NODE CONFIGURATION — edit labels and values here
@@ -116,6 +117,20 @@
         //       ...
         //   ]
         const nodeOverrides = {
+            '0_0_0': [
+                { label: 'Primary Root', value: 1 },
+                { label: 'Primary Branch Start', value: 1 },
+                { label: 'Primary Key Node', value: 2 },
+                { label: 'Branch-0 Node 4', value: 1 },
+                null,
+                { label: 'Branch-0 Node 6', value: 2 },
+                null,
+                null,
+                { label: 'Branch-0 Node 9', value: 2 },
+                null,
+                null,
+                { label: 'Branch-0 Final Node', value: 3 }
+            ],
             '0_0_1': [
                 { label: 'Alt Root', value: 2 },
                 { label: 'Alt Branch Start', value: 1 },
@@ -262,7 +277,7 @@
             
             const tableTitle = document.createElement('div');
             tableTitle.className = 'table-title';
-            tableTitle.textContent = `Table ${tableIndex + 1}`;
+            tableTitle.textContent = tableNames[tableIndex] || `Table ${tableIndex + 1}`;
             tableDiv.appendChild(tableTitle);
 
             // Add 3 trees per table
