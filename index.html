@@ -3,34 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>9 Trees with Node Selection</title>
+    <title>Interactive Tree Nodes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .tree {
+            margin: 20px 0;
+            padding: 10px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+        .node {
+            margin: 5px 0;
+            padding: 8px;
+            background-color: #e7e7e7;
+            border-radius: 4px;
+        }
+        .total {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>9 Trees with Node Selection</h1>
-    <div id="trees">
-        <!-- Trees will be generated here -->
-    </div>
+    <h1>Interactive Tree Nodes</h1>
+
+    <div id="trees"></div>
+
     <script>
-        function createTrees() {
-            const container = document.getElementById('trees');
-            for (let i = 0; i < 9; i++) {
-                const treeDiv = document.createElement('div');
-                treeDiv.className = 'tree';
-                treeDiv.innerHTML = `<h3>Tree ${i + 1}</h3>`;
-                for (let j = 0; j < 24; j++) {
-                    const nodeValue = Math.floor(Math.random() * 10) + 1; // Random value between 1 and 10
-                    const checkbox = `<input type="checkbox" onchange="updateTotal(this, ${nodeValue})"> Node Value: ${nodeValue}`;
-                    treeDiv.innerHTML += `<div>${checkbox}</div>`;
-                }
-                container.appendChild(treeDiv);
+        const totalLimit = 66;
+        let overallTotal = 0;
+
+        function createTree(treeIndex) {
+            const treeDiv = document.createElement('div');
+            treeDiv.className = 'tree';
+            const treeTitle = document.createElement('h2');
+            treeTitle.innerText = `Tree ${treeIndex + 1}`;
+            treeDiv.appendChild(treeTitle);
+
+            let treeTotal = 0;
+            for (let i = 0; i < 24; i++) {
+                const nodeDiv = document.createElement('div');
+                nodeDiv.className = 'node';
+                const value = Math.floor(Math.random() * 10) + 1; // Values from 1-10
+                nodeDiv.innerHTML = `<span>Node ${i + 1} (Value: ${value} points)</span>`;
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = value;
+
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        if (overallTotal + value > totalLimit) {
+                            alert('Total exceeds limit!');
+                            this.checked = false;
+                            return;
+                        }
+                        overallTotal += value;
+                        treeTotal += value;
+                    } else {
+                        overallTotal -= value;
+                        treeTotal -= value;
+                    }
+                    updateTotals(treeIndex, treeTotal);
+                });
+
+                nodeDiv.appendChild(checkbox);
+                treeDiv.appendChild(nodeDiv);
             }
+
+            const totalDiv = document.createElement('div');
+            totalDiv.className = 'total';
+            totalDiv.id = `treeTotal${treeIndex}`;
+            totalDiv.innerText = `Total: ${treeTotal}`;
+            treeDiv.appendChild(totalDiv);
+
+            document.getElementById('trees').appendChild(treeDiv);
         }
 
-        function updateTotal(checkbox, value) {
-            // Implement logic to ensure the total does not exceed 66
+        function updateTotals(treeIndex, treeTotal) {
+            document.getElementById(`treeTotal${treeIndex}`).innerText = `Total: ${treeTotal}`;
+            document.getElementById('overallTotal').innerText = `Overall Total: ${overallTotal}`;
         }
 
-        createTrees();
+        for (let i = 0; i < 9; i++) {
+            createTree(i);
+        }
+
+        const overallTotalDiv = document.createElement('div');
+        overallTotalDiv.className = 'total';
+        overallTotalDiv.id = 'overallTotal';
+        overallTotalDiv.innerText = `Overall Total: ${overallTotal}`;
+        document.body.appendChild(overallTotalDiv);
     </script>
 </body>
 </html>
