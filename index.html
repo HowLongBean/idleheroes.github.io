@@ -63,17 +63,6 @@
             font-weight: bold;
             color: #ff9800;
         }
-        .totals {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #fff3cd;
-            border-radius: 3px;
-        }
-        .total {
-            font-weight: bold;
-            margin: 5px 0;
-            color: #333;
-        }
         .overall-total {
             font-size: 20px;
             font-weight: bold;
@@ -231,12 +220,6 @@
             for (let i = 0; i < 3; i++) {
                 tableDiv.appendChild(createTree(i, tableIndex));
             }
-
-            const tableTotal = document.createElement('div');
-            tableTotal.className = 'totals';
-            tableTotal.id = `tableTotal_${tableIndex}`;
-            tableTotal.innerHTML = `<div class="total">Table Total: 0</div>`;
-            tableDiv.appendChild(tableTotal);
 
             return tableDiv;
         }
