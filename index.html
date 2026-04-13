@@ -12,14 +12,12 @@
         }
         .table-container {
             display: grid;
-            grid-column: 1 / span 2;
+            grid-template-rows: auto 1fr;
             gap: 20px;
         }
         .table-title {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            color: #333;
+            grid-column: 1 / span 2;
+            grid-row: 1;
         }
         .tree-container {
             display: grid;
@@ -217,6 +215,12 @@
             for (let i = 0; i < 2; i++) {
                 treeDiv.appendChild(createBranch(i, tableIndex, treeIndex));
             }
+
+            const treeTotal = document.createElement('div');
+            treeTotal.className = 'total';
+            treeTotal.id = `treeTotal_${tableIndex}_${treeIndex}`;
+            treeTotal.textContent = 'Tree Total: 0';
+            treeDiv.appendChild(treeTotal);
 
             return treeDiv;
         }
