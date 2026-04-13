@@ -183,7 +183,7 @@
 
             const labelSpan = document.createElement('span');
             labelSpan.className = 'node-label' + (isShared ? ' shared' : '');
-            labelSpan.textContent = `${label} (${value}pts)`;
+            labelSpan.textContent = `${label}`;
             labelSpan.title = isShared ? 'Shared node (applies to all branches)' : '';
 
             checkbox.addEventListener('change', function(e) {
