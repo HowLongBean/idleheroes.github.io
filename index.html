@@ -63,7 +63,6 @@
             cursor: pointer;
             white-space: pre-line;
         }
-        .node-label.shared,
         .node-label.highlight {
             font-weight: bold;
             color: #ff9800;
@@ -408,7 +407,7 @@
 
             const labelSpan = document.createElement('span');
             const highlightNodes = [6, 10]; // Node 7 and Node 11 (0-based)
-            const extraClass = isShared ? ' shared' : highlightNodes.includes(nodeIndex) ? ' highlight' : '';
+            const extraClass = highlightNodes.includes(nodeIndex) ? ' highlight' : '';
             labelSpan.className = 'node-label' + extraClass;
             labelSpan.textContent = `${label}`;
             labelSpan.title = isShared ? 'Shared node (applies to all branches)' : '';
