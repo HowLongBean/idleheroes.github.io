@@ -11,11 +11,9 @@
             padding: 20px;
         }
         .table-container {
-            margin: 30px 0;
-            padding: 15px;
-            background-color: #fff;
-            border: 2px solid #333;
-            border-radius: 5px;
+            display: grid;
+            grid-column: 1 / span 2;
+            gap: 20px;
         }
         .table-title {
             font-size: 24px;
@@ -219,12 +217,6 @@
             for (let i = 0; i < 2; i++) {
                 treeDiv.appendChild(createBranch(i, tableIndex, treeIndex));
             }
-
-            const treeTotal = document.createElement('div');
-            treeTotal.className = 'total';
-            treeTotal.id = `treeTotal_${tableIndex}_${treeIndex}`;
-            treeTotal.textContent = 'Tree Total: 0';
-            treeDiv.appendChild(treeTotal);
 
             return treeDiv;
         }
