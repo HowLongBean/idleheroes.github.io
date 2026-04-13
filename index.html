@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Tree Nodes - v99.0.0</title>
+    <title>Interactive Tree Nodes</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,10 +25,8 @@
             gap: 20px;
         }
         .tree-title {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 10px;
-            color: #555;
+            grid-column: 1 / span 2;
+            grid-row: 1;
         }
         .branch {
             margin: 10px 0;
@@ -88,7 +86,7 @@
     </style>
 </head>
 <body>
-    <h1>Interactive Tree Nodes - 3 Tables</h1>
+    <h1>Interactive Tree Nodes - v99.0.1</h1>
     <div id="tablesContainer"></div>
     <div id="overallTotalDiv" class="overall-total">Overall Total: 0</div>
 
@@ -215,12 +213,6 @@
             for (let i = 0; i < 2; i++) {
                 treeDiv.appendChild(createBranch(i, tableIndex, treeIndex));
             }
-
-            const treeTotal = document.createElement('div');
-            treeTotal.className = 'total';
-            treeTotal.id = `treeTotal_${tableIndex}_${treeIndex}`;
-            treeTotal.textContent = 'Tree Total: 0';
-            treeDiv.appendChild(treeTotal);
 
             return treeDiv;
         }
