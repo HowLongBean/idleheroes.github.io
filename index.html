@@ -113,7 +113,8 @@
             const nodeDiv = document.createElement('div');
             nodeDiv.className = 'node';
             
-            const value = Math.floor(Math.random() * 10) + 1;
+            // Set deterministic values: nodes 1-11 = 1, node 12 = 2
+            const value = (nodeIndex < 11) ? 1 : 2;
             const nodeId = `node_${tableIndex}_${treeIndex}_${branchIndex}_${nodeIndex}`;
             const label = nodeLabels[nodeIndex] || `Node ${nodeIndex + 1}`;
             
@@ -137,7 +138,8 @@
             checkbox.addEventListener('change', function(e) {
                 // If this is a shared node, propagate the checked state to other shared nodes with same nodeIndex
                 if (isShared) {
-                    const selector = `input[type="checkbox"][data-shared="true"][data-node-index="${nodeIndex}"]`;
+                    // propagate only to shared nodes in the same tree (the 2 branches of this tree)
+                    const selector = `input[type="checkbox"][data-shared="true"][data-node-index="${nodeIndex}"][data-tree-index="${treeIndex}"]`;
                     document.querySelectorAll(selector).forEach(cb => {
                         if (cb !== this) cb.checked = this.checked;
                     });
@@ -257,15 +259,16 @@
                 overallTotal += parseInt(checkbox.dataset.value);
             });
 
-            if (overallTotal > totalLimit) {
+                if (overallTotal > totalLimit) {
                 alert(`Total exceeds limit of ${totalLimit}!`);
                 // revert the triggering change if available
                 if (e && e.target) {
                     e.target.checked = false;
-                    // if shared, revert other shared nodes with same nodeIndex
+                    // if shared, revert other shared nodes with same nodeIndex in the same tree
                     if (e.target.dataset && e.target.dataset.shared === 'true') {
                         const nodeIdx = e.target.dataset.nodeIndex;
-                        const selector = `input[type="checkbox"][data-shared="true"][data-node-index="${nodeIdx}"]`;
+                        const treeIdx = e.target.dataset.treeIndex;
+                        const selector = `input[type="checkbox"][data-shared="true"][data-node-index="${nodeIdx}"][data-tree-index="${treeIdx}"]`;
                         document.querySelectorAll(selector).forEach(cb => {
                             if (cb !== e.target) cb.checked = false;
                         });
