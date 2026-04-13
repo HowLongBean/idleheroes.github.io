@@ -3,102 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Tree Nodes</title>
+    <title>Interactive Tree Nodes - 3 Tables</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
             padding: 20px;
         }
-        .tree {
-            margin: 20px 0;
-            padding: 10px;
-            border: 2px solid #ccc;
-            border-radius: 5px;
+        .table-container {
+            margin: 30px 0;
+            padding: 15px;
             background-color: #fff;
+            border: 2px solid #333;
+            border-radius: 5px;
+        }
+        .table-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .tree-container {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .tree-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        .branch {
+            margin: 10px 0;
+            padding: 8px;
+            background-color: #e8f4f8;
+            border-left: 4px solid #4CAF50;
+            border-radius: 3px;
+        }
+        .branch-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #4CAF50;
+            margin-bottom: 8px;
         }
         .node {
             margin: 5px 0;
-            padding: 8px;
-            background-color: #e7e7e7;
-            border-radius: 4px;
+            padding: 6px 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .node input[type="checkbox"] {
+            cursor: pointer;
+        }
+        .node-label {
+            flex: 1;
+            cursor: pointer;
+        }
+        .node-label.shared {
+            font-weight: bold;
+            color: #ff9800;
+        }
+        .totals {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #fff3cd;
+            border-radius: 3px;
         }
         .total {
             font-weight: bold;
-            margin-top: 10px;
+            margin: 5px 0;
+            color: #333;
+        }
+        .overall-total {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 5px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <h1>Interactive Tree Nodes</h1>
-
-    <div id="trees"></div>
+    <h1>Interactive Tree Nodes - 3 Tables</h1>
+    <div id="tablesContainer"></div>
+    <div id="overallTotalDiv" class="overall-total">Overall Total: 0</div>
 
     <script>
         const totalLimit = 66;
         let overallTotal = 0;
+        const treeData = [];
 
-        function createTree(treeIndex) {
-            const treeDiv = document.createElement('div');
-            treeDiv.className = 'tree';
-            const treeTitle = document.createElement('h2');
-            treeTitle.innerText = `Tree ${treeIndex + 1}`;
-            treeDiv.appendChild(treeTitle);
+        // Node labels configuration - easy to modify
+        const nodeLabels = [
+            'Root', 'Branch Start', 'Key Node',
+            'Node 4', 'Node 5', 'Node 6', 'Node 7', 'Node 8', 'Node 9', 'Node 10', 'Node 11', 'Node 12'
+        ];
 
-            let treeTotal = 0;
-            for (let i = 0; i < 24; i++) {
-                const nodeDiv = document.createElement('div');
-                nodeDiv.className = 'node';
-                const value = Math.floor(Math.random() * 10) + 1; // Values from 1-10
-                nodeDiv.innerHTML = `<span>Node ${i + 1} (Value: ${value} points)</span>`;
+        function createNode(nodeIndex, tableIndex, treeIndex, branchIndex, isShared = false) {
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = 'node';
+            
+            const value = Math.floor(Math.random() * 10) + 1;
+            const nodeId = `node_${tableIndex}_${treeIndex}_${branchIndex}_${nodeIndex}`;
+            const label = nodeLabels[nodeIndex] || `Node ${nodeIndex + 1}`;
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = nodeId;
+            checkbox.value = value;
+            checkbox.dataset.value = value;
 
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.value = value;
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'node-label' + (isShared ? ' shared' : '');
+            labelSpan.textContent = `${label} (${value}pts)`;
+            labelSpan.title = isShared ? 'Shared node (applies to all branches)' : '';
 
-                checkbox.addEventListener('change', function() {
-                    if (this.checked) {
-                        if (overallTotal + value > totalLimit) {
-                            alert('Total exceeds limit!');
-                            this.checked = false;
-                            return;
-                        }
-                        overallTotal += value;
-                        treeTotal += value;
-                    } else {
-                        overallTotal -= value;
-                        treeTotal -= value;
-                    }
-                    updateTotals(treeIndex, treeTotal);
-                });
+            checkbox.addEventListener('change', function() {
+                updateTotal();
+            });
 
-                nodeDiv.appendChild(checkbox);
-                treeDiv.appendChild(nodeDiv);
+            nodeDiv.appendChild(checkbox);
+            nodeDiv.appendChild(labelSpan);
+            
+            return nodeDiv;
+        }
+
+        function createBranch(branchIndex, tableIndex, treeIndex) {
+            const branchDiv = document.createElement('div');
+            branchDiv.className = 'branch';
+            
+            const branchTitle = document.createElement('div');
+            branchTitle.className = 'branch-title';
+            branchTitle.textContent = `Branch ${branchIndex + 1}`;
+            branchDiv.appendChild(branchTitle);
+
+            // Add 12 nodes per branch
+            // First 3 are shared
+            for (let i = 0; i < 12; i++) {
+                const isShared = i < 3;
+                branchDiv.appendChild(createNode(i, tableIndex, treeIndex, branchIndex, isShared));
             }
 
-            const totalDiv = document.createElement('div');
-            totalDiv.className = 'total';
-            totalDiv.id = `treeTotal${treeIndex}`;
-            totalDiv.innerText = `Total: ${treeTotal}`;
-            treeDiv.appendChild(totalDiv);
-
-            document.getElementById('trees').appendChild(treeDiv);
+            return branchDiv;
         }
 
-        function updateTotals(treeIndex, treeTotal) {
-            document.getElementById(`treeTotal${treeIndex}`).innerText = `Total: ${treeTotal}`;
-            document.getElementById('overallTotal').innerText = `Overall Total: ${overallTotal}`;
+        function createTree(treeIndex, tableIndex) {
+            const treeDiv = document.createElement('div');
+            treeDiv.className = 'tree-container';
+            
+            const treeTitle = document.createElement('div');
+            treeTitle.className = 'tree-title';
+            treeTitle.textContent = `Tree ${treeIndex + 1}`;
+            treeDiv.appendChild(treeTitle);
+
+            // Add 2 branches per tree
+            for (let i = 0; i < 2; i++) {
+                treeDiv.appendChild(createBranch(i, tableIndex, treeIndex));
+            }
+
+            const treeTotal = document.createElement('div');
+            treeTotal.className = 'total';
+            treeTotal.id = `treeTotal_${tableIndex}_${treeIndex}`;
+            treeTotal.textContent = 'Tree Total: 0';
+            treeDiv.appendChild(treeTotal);
+
+            return treeDiv;
         }
 
-        for (let i = 0; i < 9; i++) {
-            createTree(i);
+        function createTable(tableIndex) {
+            const tableDiv = document.createElement('div');
+            tableDiv.className = 'table-container';
+            
+            const tableTitle = document.createElement('div');
+            tableTitle.className = 'table-title';
+            tableTitle.textContent = `Table ${tableIndex + 1}`;
+            tableDiv.appendChild(tableTitle);
+
+            // Add 2 trees per table
+            for (let i = 0; i < 2; i++) {
+                tableDiv.appendChild(createTree(i, tableIndex));
+            }
+
+            const tableTotal = document.createElement('div');
+            tableTotal.className = 'totals';
+            tableTotal.id = `tableTotal_${tableIndex}`;
+            tableTotal.innerHTML = `<div class="total">Table Total: 0</div>`;
+            tableDiv.appendChild(tableTotal);
+
+            return tableDiv;
         }
 
-        const overallTotalDiv = document.createElement('div');
-        overallTotalDiv.className = 'total';
-        overallTotalDiv.id = 'overallTotal';
-        overallTotalDiv.innerText = `Overall Total: ${overallTotal}`;
-        document.body.appendChild(overallTotalDiv);
+        function updateTotal() {
+            overallTotal = 0;
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(checkbox => {
+                overallTotal += parseInt(checkbox.dataset.value);
+            });
+
+            if (overallTotal > totalLimit) {
+                alert(`Total exceeds limit of ${totalLimit}!`);
+                event.target.checked = false;
+                updateTotal();
+                return;
+            }
+
+            // Update overall total
+            document.getElementById('overallTotalDiv').textContent = `Overall Total: ${overallTotal}`;
+        }
+
+        // Create 3 tables
+        const container = document.getElementById('tablesContainer');
+        for (let i = 0; i < 3; i++) {
+            container.appendChild(createTable(i));
+        }
     </script>
 </body>
 </html>
