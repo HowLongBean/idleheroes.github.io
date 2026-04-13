@@ -158,39 +158,53 @@
                 }
 
                 updateTotal(e);
-            });
+                    overallTotal = 0;
+                    const seenShared = new Set();
+                    const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+                    checkboxes.forEach(checkbox => {
+                        const isShared = checkbox.dataset && checkbox.dataset.shared === 'true';
+                        if (isShared) {
+                            const key = `${checkbox.dataset.treeUid}_${checkbox.dataset.nodeIndex}`;
+                            if (seenShared.has(key)) return; // already counted this shared node for this tree
+                            seenShared.add(key);
+                        }
+                        overallTotal += parseInt(checkbox.dataset.value, 10) || 0;
+                    });
 
-            nodeDiv.appendChild(checkbox);
-            nodeDiv.appendChild(labelSpan);
-            
-            return nodeDiv;
-        }
+                    if (overallTotal > totalLimit) {
+                        alert(`Total exceeds limit of ${totalLimit}!`);
+                        // revert the triggering change if available
+                        if (e && e.target) {
+                            e.target.checked = false;
+                            // if shared, revert other shared nodes with same nodeIndex in the same tree
+                            if (e.target.dataset && e.target.dataset.shared === 'true') {
+                                const nodeIdx = e.target.dataset.nodeIndex;
+                                const treeUid = e.target.dataset.treeUid;
+                                const selector = `input[type="checkbox"][data-shared="true"][data-node-index="${nodeIdx}"][data-tree-uid="${treeUid}"]`;
+                                document.querySelectorAll(selector).forEach(cb => {
+                                    if (cb !== e.target) cb.checked = false;
+                                });
+                            }
+                        }
 
-        function createBranch(branchIndex, tableIndex, treeIndex) {
-            const branchDiv = document.createElement('div');
-            branchDiv.className = 'branch';
-            
-            const branchTitle = document.createElement('div');
-            branchTitle.className = 'branch-title';
-            branchTitle.textContent = `Branch ${branchIndex + 1}`;
-            branchDiv.appendChild(branchTitle);
+                        // Recompute totals after revert (respecting shared uniqueness)
+                        overallTotal = 0;
+                        const seenAfterRevert = new Set();
+                        document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+                            const isShared = checkbox.dataset && checkbox.dataset.shared === 'true';
+                            if (isShared) {
+                                const key = `${checkbox.dataset.treeUid}_${checkbox.dataset.nodeIndex}`;
+                                if (seenAfterRevert.has(key)) return;
+                                seenAfterRevert.add(key);
+                            }
+                            overallTotal += parseInt(checkbox.dataset.value, 10) || 0;
+                        });
+                        document.getElementById('overallTotalDiv').textContent = `Overall Total: ${overallTotal}`;
+                        return;
+                    }
 
-            // Add 12 nodes per branch
-            // First 3 are shared
-            for (let i = 0; i < 12; i++) {
-                const isShared = i < 3;
-                branchDiv.appendChild(createNode(i, tableIndex, treeIndex, branchIndex, isShared));
-            }
-
-            // enforce ordering initially for this branch
-            enforceOrderForBranch(branchDiv);
-
-            return branchDiv;
-        }
-
-        // Enforce that a node can only be enabled if the previous node is checked
-        function enforceOrderForBranch(branchDiv) {
-            if (!branchDiv) return;
+                    // Update overall total
+                    document.getElementById('overallTotalDiv').textContent = `Overall Total: ${overallTotal}`;
             const checkboxes = Array.from(branchDiv.querySelectorAll('.node input[type="checkbox"]'));
             checkboxes.forEach((cb, idx) => {
                 if (idx === 0) {
@@ -240,8 +254,8 @@
             tableTitle.textContent = `Table ${tableIndex + 1}`;
             tableDiv.appendChild(tableTitle);
 
-            // Add 2 trees per table
-            for (let i = 0; i < 2; i++) {
+            // Add 3 trees per table
+            for (let i = 0; i < 3; i++) {
                 tableDiv.appendChild(createTree(i, tableIndex));
             }
 
