@@ -99,14 +99,14 @@
             { label: 'Attack +1.0%\nHP +1.5%', value: 1 },  // Node 1  (shared)
             { label: 'Attack +1.0%\nHP +1.5%', value: 1 },  // Node 2  (shared)
             { label: 'Attack +1.0%\nHP +1.5%', value: 1 },  // Node 3  (shared)
-            { label: 'Node 4',       value: 1 },  // Node 4
-            { label: 'Node 5',       value: 1 },  // Node 5
-            { label: 'Node 6',       value: 1 },  // Node 6
-            { label: 'Node 7',       value: 1 },  // Node 7
-            { label: 'Node 8',       value: 1 },  // Node 8
-            { label: 'Node 9',       value: 1 },  // Node 9
-            { label: 'Node 10',      value: 1 },  // Node 10
-            { label: 'Node 11',      value: 2 },  // Node 11
+            { label: 'Attack +1.0%\nHP +1.5%', value: 1 },  // Node 4
+            { label: 'Attack +1.0%\nHP +1.5%', value: 1 },  // Node 5
+            { label: 'Attack +1.0%\nHP +1.5%', value: 1 },  // Node 6
+            { label: 'Node 7',       value: 1 },            // Node 7
+            { label: 'Attack +1.0%\nHP +1.5%', value: 1 },  // Node 8
+            { label: 'Attack +1.0%\nHP +1.5%', value: 1 },  // Node 9
+            { label: 'Attack +1.0%\nHP +1.5%', value: 1 },  // Node 10
+            { label: 'Node 11',      value: 2 },            // Node 11
         ];
 
         // Override labels/values for a specific branch.
@@ -125,14 +125,14 @@
                 null,  // Node 1  (shared)
                 null,  // Node 2  (shared)
                 null,  // Node 3  (shared)
-                null,  // Node 4
-                null,  // Node 5
-                null,  // Node 6
-                null,  // Node 7
-                null,  // Node 8
-                null,  // Node 9
-                null,  // Node 10
-                null,  // Node 11
+                { label: 'Attack +1.0%\nHP +1.5%\nCrit +3.3%', value: 1 },  // Node 4
+                { label: 'Attack +1.0%\nHP +1.5%\nCrit +3.3%', value: 1 },  // Node 5
+                { label: 'Attack +1.0%\nHP +1.5%\nCrit +3.3%', value: 1 },  // Node 6
+                { label: 'When dealing damage by releasing basic attacks or active skills, increases self Crit by 8% for 2 rounds.', value: 1 },  // Node 7
+                { label: 'Attack +1.0%\nHP +1.5%\nCrit +3.3%', value: 1 },  // Node 8
+                { label: 'Attack +1.0%\nHP +1.5%\nCrit +3.3%', value: 1 },  // Node 9
+                { label: 'Attack +1.0%\nHP +1.5%\nCrit +3.3%', value: 1 },  // Node 10
+                { label: 'For every 2 Crit landed, the next released active skill has a 100% chance to deal (3000% of Attack) damage to the target(s), ignoring their Armor, Damage Reduction, All-damage Reduction, Block, Dodge, and Crit Damage Resistance.',      value: 2 },  // Node 11
             ],
             // Table 0 (Blade), Tree 0, Branch 1
             '0_0_1': [
