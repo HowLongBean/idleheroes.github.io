@@ -1,0 +1,1157 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>雲舒島模擬器</title>
+    <link rel="stylesheet" href="../site-navigation.css">
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+        background: #101827;
+        color: #edf2fa;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { width: calc(100% - 40px); max-width: 1600px; margin: 48px auto; }
+      h1 { margin: 8px 0 12px; font-size: clamp(1.8rem, 5vw, 2.5rem); }
+      h2 { margin: 0; font-size: 1.25rem; }
+      p { line-height: 1.6; }
+      .muted { color: #aab8cd; }
+      .group-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+      .share-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-left: auto; max-width: 100%; }
+      #mark-duplicates[aria-pressed="true"] { background: #702633; border-color: #ff3344; }
+      #share-result { margin-top: 20px; }
+      #share-result label { display: block; margin-bottom: 8px; }
+      #share-url {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #526583;
+        border-radius: 8px;
+        background: #142035;
+        color: inherit;
+        font: inherit;
+      }
+      #groups { container-type: inline-size; }
+      .picker-panels {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        align-items: start;
+        gap: clamp(4px, 1.25cqw, 20px);
+        margin-top: 32px;
+        font-size: clamp(8px, 1cqw, 16px);
+      }
+      .panel {
+        min-width: 0;
+        padding: clamp(2px, 1.25cqw, 20px);
+        border: 1px solid #34425a;
+        border-radius: clamp(4px, 1.25cqw, 20px);
+        background: #1a2639;
+      }
+
+      button { font: inherit; color: inherit; cursor: pointer; }
+      button:focus-visible, .picker-panels:focus-visible, #share-url:focus-visible { outline: 3px solid #9fc2ff; outline-offset: 4px; }
+      button:disabled { cursor: not-allowed; opacity: .5; }
+      .panel-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: clamp(1px, .5cqw, 8px);
+        min-height: clamp(24px, 4cqw, 56px);
+        margin-bottom: clamp(4px, 1.25cqw, 20px);
+      }
+      .panel-actions { display: flex; gap: 2px; margin-left: auto; }
+      .nirvana-button, .icon-picker {
+        flex-shrink: 0;
+        width: clamp(24px, 4cqw, 56px);
+        height: clamp(24px, 4cqw, 56px);
+        padding: 1px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        background: transparent;
+      }
+      .icon-picker {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-color: #526583;
+        font-size: clamp(18px, 1.5cqw, 24px);
+      }
+      .icon-picker:hover { background: #34425a; }
+      .icon-picker img { width: 100%; height: 100%; object-fit: contain; }
+      .nirvana-button img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: grayscale(1);
+      }
+      .nirvana-button[aria-pressed="true"] { border-color: #efbe6a; }
+      .nirvana-button[aria-pressed="true"] img { filter: none; }
+      .image-picker {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: clamp(3px, .75cqw, 12px);
+        width: 100%;
+        min-height: clamp(64px, 12.5cqw, 200px);
+        padding: clamp(2px, 1.25cqw, 20px);
+        overflow-wrap: anywhere;
+        border: clamp(1px, .125cqw, 2px) dashed #6888b9;
+        border-radius: clamp(3px, .875cqw, 14px);
+        background: #142035;
+      }
+      .image-picker:hover:not(:disabled) { background: #20314c; border-color: #9fc2ff; }
+      .image-picker.is-nirvana { background: #4a321d; border-color: #efbe6a; }
+      .image-picker.is-nirvana:hover:not(:disabled) { background: #634323; border-color: #ffda92; }
+      .image-picker.is-duplicate::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border: 4px solid #ff3344;
+        border-radius: inherit;
+        box-shadow: 0 0 6px #ff3344;
+        pointer-events: none;
+      }
+      .image-picker > * { max-width: 100%; }
+      .image-picker strong:empty { display: none; }
+      .section-title {
+        margin: 0;
+        font-size: clamp(7px, 1.25cqw, 20px);
+        white-space: nowrap;
+      }
+      .placeholder { font-size: clamp(18px, 3cqw, 48px); color: #94bbff; }
+      .preview {
+        width: min(100%, clamp(32px, 7cqw, 112px));
+        height: auto;
+        aspect-ratio: 112 / 118;
+        object-fit: contain;
+      }
+      .error { color: #ffb3b3; overflow-wrap: anywhere; }
+
+      dialog {
+        width: min(760px, calc(100% - 32px));
+        max-height: 85vh;
+        max-height: 85dvh;
+        padding: 0;
+        border: 1px solid #526583;
+        border-radius: 20px;
+        background: #1a2639;
+        color: inherit;
+      }
+      dialog::backdrop { background: rgb(4 10 20 / 80%); }
+      .dialog-content { padding: 24px; }
+      .dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+      #dialog-title { font-weight: normal; }
+      .close-button, .group-button {
+        flex-shrink: 0;
+        padding: 8px 14px;
+        border: 1px solid #526583;
+        border-radius: 8px;
+        background: #263750;
+      }
+      .group-button:hover { background: #344b6a; }
+      .image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .image-option {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        padding: 12px 6px;
+        border: 2px solid #344763;
+        border-radius: 12px;
+        background: #142035;
+      }
+      .image-option:hover:not(:disabled) { border-color: #9fc2ff; background: #20314c; }
+      .image-option[aria-pressed="true"] { border-color: #9fc2ff; background: #2c4265; }
+      .image-option img { width: 94px; height: 99px; object-fit: contain; }
+      .image-option span { max-width: 100%; overflow-wrap: anywhere; font-size: .85rem; }
+      .image-option-none { min-height: 128px; justify-content: center; }
+
+      @container (max-width: 600px) {
+        .panel { padding: clamp(1px, .35cqw, 2px); }
+        .panel-heading { flex-direction: column; align-items: stretch; gap: 4px; }
+      }
+
+      @media (max-width: 420px) {
+        main { width: calc(100% - 32px); margin: 28px auto; }
+        .dialog-content { padding: 16px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <details class="site-navigation">
+        <summary>
+          <span class="site-hamburger" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+          <span>MENU</span>
+        </summary>
+        <nav aria-label="工具導覽">
+          <a href="../index.html">HOME</a>
+          <a href="./CloudIsland.html" aria-current="page">CLOUD ISLAND</a>
+          <a href="../Imprint/imprint.html">IMPRINT INFUSION</a>
+        </nav>
+      </details>
+      <span class="site-name">Idle Heroes</span>
+    </header>
+    <main>
+      <div class="group-controls">
+        <button id="add-group" class="group-button" type="button" aria-controls="groups">住宅新建</button>
+        <button id="delete-group" class="group-button" type="button" aria-controls="groups" hidden>住宅拆遷</button>
+        <div class="share-controls">
+          <button id="mark-duplicates" class="group-button" type="button" aria-controls="groups" aria-pressed="false">標記重複角色</button>
+          <button id="share-settings" class="group-button" type="button" aria-controls="share-result">產生分享網址</button>
+        </div>
+      </div>
+      <div id="share-result" hidden>
+        <label for="share-url">分享網址</label>
+        <input id="share-url" type="text" readonly>
+        <p id="share-status" class="muted" role="status"></p>
+      </div>
+      <p id="state-error" class="error" role="alert" hidden></p>
+      <div id="groups"></div>
+      <noscript><p class="error">請啟用 JavaScript，才能開啟圖片選項。</p></noscript>
+    </main>
+
+    <template id="group-template">
+      <div class="picker-panels selection-group" role="group" tabindex="0">
+        <section class="panel">
+          <h1 class="section-title">屋主</h1>
+          <button class="image-picker landlord-picker" type="button"
+            aria-haspopup="dialog" aria-controls="image-dialog">
+            <span class="placeholder" aria-hidden="true">＋</span>
+            <img class="preview" alt="" hidden>
+            <strong></strong>
+          </button>
+          <p class="error" role="alert" hidden></p>
+        </section>
+        <section class="panel">
+          <h2 class="section-title">房客 1</h2>
+          <button class="image-picker tenant-picker" type="button"
+            aria-haspopup="dialog" aria-controls="image-dialog" disabled>
+            <span class="placeholder" aria-hidden="true">＋</span>
+            <img class="preview" alt="" hidden>
+            <strong></strong>
+          </button>
+          <p class="error" role="alert" hidden></p>
+        </section>
+        <section class="panel">
+          <h2 class="section-title">房客 2</h2>
+          <button class="image-picker tenant-picker" type="button"
+            aria-haspopup="dialog" aria-controls="image-dialog" disabled>
+            <span class="placeholder" aria-hidden="true">＋</span>
+            <img class="preview" alt="" hidden>
+            <strong></strong>
+          </button>
+          <p class="error" role="alert" hidden></p>
+        </section>
+        <section class="panel">
+          <h2 class="section-title">房客 3</h2>
+          <button class="image-picker tenant-picker" type="button"
+            aria-haspopup="dialog" aria-controls="image-dialog" disabled>
+            <span class="placeholder" aria-hidden="true">＋</span>
+            <img class="preview" alt="" hidden>
+            <strong></strong>
+          </button>
+          <p class="error" role="alert" hidden></p>
+        </section>
+        <section class="panel">
+          <h2 class="section-title">房客 4</h2>
+          <button class="image-picker tenant-picker" type="button"
+            aria-haspopup="dialog" aria-controls="image-dialog" disabled>
+            <span class="placeholder" aria-hidden="true">＋</span>
+            <img class="preview" alt="" hidden>
+            <strong></strong>
+          </button>
+          <p class="error" role="alert" hidden></p>
+        </section>
+      </div>
+    </template>
+
+    <dialog id="image-dialog" aria-label="圖片選擇">
+      <div class="dialog-content">
+        <div class="dialog-header">
+          <h2 id="dialog-title">選擇圖片即可套用；按 Esc 可取消。</h2>
+          <button id="close-dialog" class="close-button" type="button" autofocus>關閉</button>
+        </div>
+        <p id="gallery-error" class="error" role="alert" hidden></p>
+        <div id="image-options" class="image-grid"></div>
+      </div>
+    </dialog>
+
+    <script>
+      // 直接調整陣列項目的位置即可改變顯示順序；程式不會重新排序。
+      const landlordImages = [
+        { filename: "lethia_trans.png", name: "Lethia" },
+        { filename: "erskor_trans.png", name: "Erskor" },
+        { filename: "umbrion_trans.png", name: "Umbrion" },
+        { filename: "mareia_trans.png", name: "Mareia" },
+        { filename: "oscar_trans.png", name: "Oscar" },
+        { filename: "madeleine_trans.png", name: "Madeleine" },
+        { filename: "basilisk_trans.png", name: "Basilisk" },
+        { filename: "ignacia_trans.png", name: "Ignacia" },
+        { filename: "vespera_trans.png", name: "Vespera" },
+        { filename: "sylvie_trans.png", name: "Sylvie" },
+        { filename: "finn_trans.png", name: "Finn" },
+        { filename: "wukong_trans.png", name: "Wukong" },
+        { filename: "haig_trans.png", name: "Haig" },
+        { filename: "williams_trans.png", name: "Williams" },
+        { filename: "melissa_trans.png", name: "Melissa" },
+        { filename: "alikita_trans.png", name: "Alikita" },
+        { filename: "luna_trans.png", name: "Luna" },
+        { filename: "patricia_trans.png", name: "Patricia" },
+        { filename: "yorhm_trans.png", name: "Yorhm" },
+        { filename: "gaggie_trans.png", name: "Gaggie" },
+        { filename: "betty_trans.png", name: "Betty" },
+        { filename: "natalie_trans.png", name: "Natalie" },
+        { filename: "geester_trans.png", name: "Geester" },
+        { filename: "aylamak_trans.png", name: "Aylamak" },
+        { filename: "elena_trans.png", name: "Elena" },
+        { filename: "vulcan_trans.png", name: "Vulcan" },
+        { filename: "aranea_trans.png", name: "Aranea" },
+        { filename: "azrael_trans.png", name: "Azrael" },
+        { filename: "mockman_trans.png", name: "Mockman" },
+        { filename: "freya_trans.png", name: "Freya" },
+        { filename: "holmes_trans.png", name: "Holmes" },
+        { filename: "eos_trans.png", name: "Eos" },
+        { filename: "aspen_trans.png", name: "Aspen" },
+        { filename: "vesa_trans.png", name: "Vesa" },
+        { filename: "jahra_trans.png", name: "Jahra" },
+        { filename: "asmodel_trans.png", name: "Asmodel" },
+        { filename: "halora_trans.png", name: "Halora" },
+        { filename: "xia_trans.png", name: "Xia" },
+      ];
+
+      const allTenantImages = [
+        "alikita.png",
+        "alikita_trans.png",
+        "annabelle.png",
+        "aranea.png",
+        "aranea_trans.png",
+        "asmodel.png",
+        "asmodel_trans.png",
+        "aylamak.png",
+        "aylamak_trans.png",
+        "azrael.png",
+        "azrael_trans.png",
+        "basilisk.png",
+        "basilisk_trans.png",
+        "betty.png",
+        "betty_trans.png",
+        "elena.png",
+        "elena_trans.png",
+        "erskor.png",
+        "erskor_trans.png",
+        "finn.png",
+        "finn_trans.png",
+        "freya.png",
+        "gaggie.png",
+        "geester.png",
+        "geester_trans.png",
+        "haig.png",
+        "haig_trans.png",
+        "ignacia.png",
+        "ignacia_trans.png",
+        "jahra_trans.png",
+        "lethia.png",
+        "lethia_trans.png",
+        "luna.png",
+        "luna_trans.png",
+        "madeleine.png",
+        "madeleine_trans.png",
+        "mareia.png",
+        "mareia_trans.png",
+        "melissa.png",
+        "melissa_trans.png",
+        "natalie.png",
+        "natalie_trans.png",
+        "oscar.png",
+        "oscar_trans.png",
+        "patricia.png",
+        "patricia_trans.png",
+        "sylvie.png",
+        "sylvie_trans.png",
+        "umbrion.png",
+        "umbrion_trans.png",
+        "vesa_trans.png",
+        "vespera.png",
+        "vespera_trans.png",
+        "vulcan.png",
+        "waldeck.png",
+        "williams.png",
+        "williams_trans.png",
+        "wukong.png",
+        "wukong_trans.png",
+        "yorhm.png",
+        "yorhm_trans.png",
+      ];
+
+      // tenantImages[i] 對應 landlordImages[i]；可將 [...allTenantImages] 換成指定檔名陣列。
+      const tenantImages = [
+        ["lethia.png", "umbrion.png"], // 0: lethia_trans.png
+        ["erskor.png", "mareia.png"], // 1: erskor_trans.png
+        ["umbrion.png", "oscar.png"], // 2: umbrion_trans.png
+        ["mareia.png", "madeleine.png"], // 3: mareia_trans.png
+        ["oscar.png", "basilisk.png"], // 4: oscar_trans.png
+        ["madeleine.png", "ignacia.png"], // 5: madeleine_trans.png
+        ["basilisk.png", "wukong.png"], // 6: basilisk_trans.png
+        ["ignacia.png", "melissa.png"], // 7: ignacia_trans.png
+        ["vespera.png", "haig.png"], // 8: vespera_trans.png
+        ["sylvie.png", "alikita.png"], // 9: sylvie_trans.png
+        ["finn.png", "williams.png"], // 10: finn_trans.png
+        ["wukong.png", "luna.png"], // 11: wukong_trans.png
+        ["haig.png", "yorhm.png"], // 12: haig_trans.png
+        ["williams.png", "geester.png"], // 13: williams_trans.png
+        ["melissa.png", "annabelle.png"], // 14: melissa_trans.png
+        ["alikita.png", "freya.png"], // 15: alikita_trans.png
+        ["luna.png", "natalie.png"], // 16: luna_trans.png
+        ["patricia.png", "gaggie.png"], // 17: patricia_trans.png
+        ["yorhm.png", "freya.png"], // 18: yorhm_trans.png
+        ["gaggie.png", "betty.png"], // 19: gaggie_trans.png
+        ["betty.png", "geester.png"], // 20: betty_trans.png
+        ["natalie.png", "mockman.png"], // 21: natalie_trans.png
+        ["geester.png", "natalie.png"], // 22: geester_trans.png
+        ["aylamak.png", "saja.png"], // 23: aylamak_trans.png
+        ["elena.png", "mockman.png"], // 24: elena_trans.png
+        ["vulcan.png", "mockman.png"], // 25: vulcan_trans.png
+        ["aranea.png", "natasha.png"], // 26: aranea_trans.png
+        ["azrael.png", "eloise.png"], // 27: azrael_trans.png
+        ["mockman.png", "phorcys.png"], // 28: mockman_trans.png
+        ["freya.png", "annabelle.png"], // 29: freya_trans.png
+        ["holmes.png", "xiahou.png"], // 30: holmes_trans.png
+        ["eos.png", "russell.png"], // 31: eos_trans.png
+        ["aspen.png", "drake.png"], // 32: aspen_trans.png
+        ["vesa.png", "rogan.png"], // 33: vesa_trans.png
+        ["jahra.png", "ithaqua.png"], // 34: jahra_trans.png
+        ["asmodel.png", "andrea.png"], // 35: asmodel_trans.png
+        ["halora.png", "ignis.png"], // 36: halora_trans.png
+        ["xia.png", "fiona.png"], // 37: xia_trans.png
+      ];
+
+      // 房客 2～4 各自使用獨立清單，索引同樣對應 landlordImages。
+      const tenantImages2 = [
+        ["basilisk_trans.png", "oscar.png"], // 0: lethia_trans.png
+        ["ignacia_trans.png", "madeleine.png"], // 1: erskor_trans.png
+        ["sylvie_trans.png", "mareia.png"], // 2: umbrion_trans.png
+        ["vespera_trans.png", "basilisk.png", "lethia_trans.png"], // 3: mareia_trans.png
+        ["haig_trans.png", "vespera.png"], // 4: oscar_trans.png
+        ["finn_trans.png", "sylvie.png", "mareia_trans.png"], // 5: madeleine_trans.png
+        ["wukong_trans.png", "williams.png", "erskor_trans.png"], // 6: basilisk_trans.png
+        ["williams_trans.png", "natalie.png", "umbrion_trans.png"], // 7: ignacia_trans.png
+        ["betty_trans.png", "freya.png", "madeleine_trans.png"], // 8: vespera_trans.png
+        ["melissa_trans.png", "luna.png", "oscar_trans.png"], // 9: sylvie_trans.png
+        ["geester_trans.png", "natalie.png", "basilisk_trans.png"], // 10: finn_trans.png
+        ["azrael_trans.png", "alikita.png", "ignacia_trans.png"], // 11: wukong_trans.png
+        ["asmodel_trans.png", "melissa.png", "vespera_trans.png"], // 12: haig_trans.png
+        ["patricia_trans.png", "aranea.png", "sylvie_trans.png"], // 13: williams_trans.png
+        ["elena_trans.png", "waldeck.png", "finn_trans.png"], // 14: melissa_trans.png
+        ["betty_trans.png", "azrael.png", "wukong_trans.png"], // 15: alikita_trans.png
+        ["yorhm_trans.png", "gaggie.png", "williams_trans.png"], // 16: luna_trans.png
+        ["natalie_trans.png", "yorhm.png", "haig_trans.png"], // 17: patricia_trans.png
+        ["geester_trans.png", "aylamak.png", "melissa_trans.png"], // 18: yorhm_trans.png
+        ["jahra_trans.png", "freya.png", "alikita_trans.png"], // 19: gaggie_trans.png
+        ["azrael_trans.png", "elena.png", "patricia_trans.png"], // 20: betty_trans.png
+        ["geester_trans.png", "betty.png", "luna_trans.png"], // 21: natalie_trans.png
+        ["azrael_trans.png", "vulcan.png", "gaggie_trans.png"], // 22: geester_trans.png
+        ["holmes_trans.png", "vulcan.png", "yorhm_trans.png"], // 23: aylamak_trans.png
+        ["aspen_trans.png", "aranea.png", "betty_trans.png"], // 24: elena_trans.png
+        ["eos_trans.png", "andrea.png", "geester_trans.png"], // 25: vulcan_trans.png
+        ["vesa_trans.png", "azrael.png", "elena_trans.png"], // 26: aranea_trans.png
+        ["xia_trans.png", "annabelle.png", "vulcan_trans.png"], // 27: azrael_trans.png
+        ["xia_trans.png", "onkirimaru.png", "aranea_trans.png"], // 28: mockman_trans.png
+        ["vesa_trans.png", "waldeck.png", "azrael_trans.png"], // 29: freya_trans.png
+        ["xia_trans.png", "annabelle.png", "mockman_trans.png"], // 30: holmes_trans.png
+        ["vesa_trans.png", "annabelle.png", "holmes_trans.png"], // 31: eos_trans.png
+        ["halora_trans.png", "carrie.png", "mockman_trans.png"], // 32: aspen_trans.png
+        ["xia_trans.png", "xiahou.png", "freya_trans.png"], // 33: vesa_trans.png
+        ["halora_trans.png", "tix.png", "holmes_trans.png"], // 34: jahra_trans.png
+        ["jahra_trans.png", "russell.png", "eos_trans.png"], // 35: asmodel_trans.png
+        ["asmodel_trans.png", "waldeck.png", "freya_trans.png"], // 36: halora_trans.png
+        ["halora_trans.png", "sherlock.png", "aspen_trans.png"], // 37: xia_trans.png
+      ];
+
+      const tenantImages3 = [
+        ["basilisk.png"], // 0: lethia_trans.png
+        ["ignacia.png"], // 1: erskor_trans.png
+        ["sylvie.png"], // 2: umbrion_trans.png
+        ["vespera.png"], // 3: mareia_trans.png
+        ["haig.png"], // 4: oscar_trans.png
+        ["finn.png"], // 5: madeleine_trans.png
+        ["finn.png"], // 6: basilisk_trans.png
+        ["williams.png"], // 7: ignacia_trans.png
+        ["betty.png"], // 8: vespera_trans.png
+        ["melissa.png"], // 9: sylvie_trans.png
+        ["geester.png"], // 10: finn_trans.png
+        ["azrael.png"], // 11: wukong_trans.png
+        ["asmodel.png"], // 12: haig_trans.png
+        ["patricia.png"], // 13: williams_trans.png
+        ["elena.png"], // 14: melissa_trans.png
+        ["betty.png"], // 15: alikita_trans.png
+        ["yorhm.png"], // 16: luna_trans.png
+        ["natalie.png"], // 17: patricia_trans.png
+        ["geester.png"], // 18: yorhm_trans.png
+        ["aylamak.png"], // 19: gaggie_trans.png
+        ["azrael.png", "yorhm.png"], // 20: betty_trans.png
+        ["eos.png", "aylamak.png"], // 21: natalie_trans.png
+        ["azrael.png", "gaggie.png"], // 22: geester_trans.png
+        ["fiona.png", "geester.png"], // 23: aylamak_trans.png
+        ["vulcan.png", "annabelle.png"], // 24: elena_trans.png
+        ["azrael.png", "tussilago.png"], // 25: vulcan_trans.png
+        ["freya.png", "annabelle.png"], // 26: aranea_trans.png
+        ["natasha.png", "holmes.png"], // 27: azrael_trans.png
+        ["eloise.png", "freya.png"], // 28: mockman_trans.png
+        ["xiahou.png", "gloria.png"], // 29: freya_trans.png
+        ["saja.png", "eos.png"], // 30: holmes_trans.png
+        ["xiahou.png", "natasha.png"], // 31: eos_trans.png
+        ["onkirimaru.png", "amenra.png"], // 32: aspen_trans.png
+        ["flora.png", "aranea.png"], // 33: vesa_trans.png
+        ["eloise.png", "annabelle.png"], // 34: jahra_trans.png
+        ["tussilago.png", "saja.png"], // 35: asmodel_trans.png
+        ["gloria.png", "morax.png"], // 36: halora_trans.png
+        ["onkirimaru.png", "inosuke.png"], // 37: xia_trans.png
+      ];
+
+      const tenantImages4 = [
+        ["oscar_trans.png"], // 0: lethia_trans.png
+        ["umbrion_trans.png"], // 1: erskor_trans.png
+        ["madeleine_trans.png"], // 2: umbrion_trans.png
+        ["ignacia_trans.png"], // 3: mareia_trans.png
+        ["melissa_trans.png"], // 4: oscar_trans.png
+        ["basilisk_trans.png", "lethia_trans.png"], // 5: madeleine_trans.png
+        ["sylvie_trans.png"], // 6: basilisk_trans.png
+        ["finn_trans.png"], // 7: ignacia_trans.png
+        ["williams_trans.png", "erskor_trans.png"], // 8: vespera_trans.png
+        ["haig_trans.png"], // 9: sylvie_trans.png
+        ["luna_trans.png"], // 10: finn_trans.png
+        ["yorhm_trans.png", "umbrion_trans.png"], // 11: wukong_trans.png
+        ["jahra_trans.png"], // 12: haig_trans.png
+        ["asmodel_trans.png", "madeleine_trans.png"], // 13: williams_trans.png
+        ["vesa_trans.png", "mareia_trans.png"], // 14: melissa_trans.png
+        ["aranea_trans.png", "basilisk_trans.png"], // 15: alikita_trans.png
+        ["betty_trans.png", "vespera_trans.png", "oscar_trans.png"], // 16: luna_trans.png
+        ["aylamak_trans.png", "sylvie_trans.png", "ignacia_trans.png"], // 17: patricia_trans.png
+        ["natalie_trans.png", "alikita_trans.png", "finn_trans.png"], // 18: yorhm_trans.png
+        ["aylamak_trans.png", "vulcan.png", "wukong_trans.png"], // 19: gaggie_trans.png
+        ["aranea_trans.png", "natalie.png", "williams_trans.png"], // 20: betty_trans.png
+        ["vulcan_trans.png", "melissa_trans.png", "gaggie_trans.png"], // 21: natalie_trans.png
+        ["elena_trans.png", "yorhm_trans.png", "haig_trans.png"], // 22: geester_trans.png
+        ["xia_trans.png", "elena.png", "luna_trans.png"], // 23: aylamak_trans.png
+        ["vesa_trans.png", "azrael.png", "patricia_trans.png"], // 24: elena_trans.png
+        ["asmodel_trans.png", "aranea.png", "natalie_trans.png"], // 25: vulcan_trans.png
+        ["halora_trans.png", "elena.png", "betty_trans.png"], // 26: aranea_trans.png
+        ["freya_trans.png", "aranea.png", "geester_trans.png"], // 27: azrael_trans.png
+        ["jahra_trans.png", "saja.png", "aylamak_trans.png"], // 28: mockman_trans.png
+        ["asmodel_trans.png", "eos.png", "natalie_trans.png"], // 29: freya_trans.png
+        ["eos_trans.png", "azrael.png", "aylamak_trans.png"], // 30: holmes_trans.png
+        ["aspen_trans.png", "vulcan.png", "vulcan_trans.png"], // 31: eos_trans.png
+        ["asmodel_trans.png", "mockman.png", "elena_trans.png"], // 32: aspen_trans.png
+        ["jahra_trans.png", "freya.png", "aranea_trans.png"], // 33: vesa_trans.png
+        ["xia_trans.png", "holmes.png", "elena_trans.png"], // 34: jahra_trans.png
+        ["halora_trans.png", "eos.png", "vulcan_trans.png"], // 35: asmodel_trans.png
+        ["jahra_trans.png", "delacium.png", "aranea_trans.png"], // 36: halora_trans.png
+        ["asmodel_trans.png", "gloria.png", "azrael_trans.png"], // 37: xia_trans.png
+      ];
+
+      const tenantConfigurations = [
+        { images: tenantImages, arrayName: "tenantImages" },
+        { images: tenantImages2, arrayName: "tenantImages2" },
+        { images: tenantImages3, arrayName: "tenantImages3" },
+        { images: tenantImages4, arrayName: "tenantImages4" },
+      ];
+      const selectableIcons = [
+        { filename: "Nova.png", name: "聖焰" },
+        { filename: "Pupil.png", name: "深瞳" },
+        { filename: "Specter.png", name: "求知" },
+        { filename: "Plume.png", name: "時刻" },
+        { filename: "Bloom.png", name: "創生" },
+        { filename: "Butterfly.png", name: "幻蝶" },
+        { filename: "Netherfish.png", name: "冥魚" },
+        { filename: "Spiral.png", name: "天城" },
+      ];
+      const shareBaseUrl = "https://howlongbean.github.io/idleheroes.github.io/Cloud/CloudIsland.html";
+      // z1 使用 DEFLATE + Base64URL；沒有前綴的舊 JSON 參數仍可還原。
+      const compressedStatePrefix = "z1.";
+      const groups = [];
+      const groupsContainer = document.getElementById("groups");
+      const groupTemplate = document.getElementById("group-template");
+      const addGroupButton = document.getElementById("add-group");
+      const deleteGroupButton = document.getElementById("delete-group");
+      const shareSettingsButton = document.getElementById("share-settings");
+      const markDuplicatesButton = document.getElementById("mark-duplicates");
+      const shareResult = document.getElementById("share-result");
+      const shareUrlInput = document.getElementById("share-url");
+      const shareStatus = document.getElementById("share-status");
+      const stateError = document.getElementById("state-error");
+      const dialog = document.getElementById("image-dialog");
+      const options = document.getElementById("image-options");
+      const galleryError = document.getElementById("gallery-error");
+      let nextGroupId = 1;
+      let shareRevision = 0;
+      let markDuplicates = false;
+
+      class SharedStateError extends Error {}
+
+      addGroupButton.addEventListener("click", addGroup);
+      deleteGroupButton.addEventListener("click", deleteGroup);
+      shareSettingsButton.addEventListener("click", generateShareUrl);
+      markDuplicatesButton.addEventListener("click", () => {
+        markDuplicates = !markDuplicates;
+        markDuplicatesButton.setAttribute("aria-pressed", String(markDuplicates));
+        updateDuplicateMarkers();
+      });
+      shareUrlInput.addEventListener("click", () => shareUrlInput.select());
+      document.getElementById("close-dialog").addEventListener("click", () => dialog.close());
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+      dialog.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          dialog.close();
+        }
+      });
+
+      function addGroup() {
+        const number = nextGroupId++;
+        const element = groupTemplate.content.firstElementChild.cloneNode(true);
+        element.id = `group-${number}`;
+        element.setAttribute("aria-label", `第 ${number} 組屋主與房客選擇`);
+        element.querySelectorAll(".panel").forEach((panel, index) => {
+          const heading = panel.querySelector(".section-title");
+          heading.id = `${element.id}-title-${index}`;
+          panel.setAttribute("aria-labelledby", heading.id);
+          panel.querySelector(".image-picker").setAttribute("aria-labelledby", heading.id);
+          const header = document.createElement("div");
+          header.className = "panel-heading";
+          heading.before(header);
+          header.append(heading);
+          const toggle = document.createElement("button");
+          toggle.type = "button";
+          toggle.className = "nirvana-button";
+          toggle.setAttribute("aria-label", `第 ${number} 組${heading.textContent} Nirvana`);
+          toggle.setAttribute("aria-pressed", "false");
+          toggle.title = "切換 Nirvana";
+          const icon = document.createElement("img");
+          icon.alt = "";
+          const iconError = document.createElement("p");
+          iconError.className = "error nirvana-error";
+          iconError.setAttribute("role", "alert");
+          iconError.hidden = true;
+          icon.addEventListener("error", () => {
+            toggle.disabled = true;
+            iconError.textContent = "無法載入 Nirvana 圖示，請確認 Icons/Nirvana.png 存在。";
+            iconError.hidden = false;
+          });
+          icon.src = "./Icons/Nirvana.png";
+          toggle.append(icon);
+          const actions = document.createElement("div");
+          actions.className = "panel-actions";
+          actions.append(toggle);
+          header.append(actions);
+          panel.append(iconError);
+
+          const iconPicker = document.createElement("button");
+          iconPicker.type = "button";
+          iconPicker.className = "icon-picker";
+          iconPicker.dataset.label = `第 ${number} 組${heading.textContent}圖示`;
+          iconPicker.setAttribute("aria-label", `${iconPicker.dataset.label}：無`);
+          iconPicker.setAttribute("aria-haspopup", "dialog");
+          iconPicker.setAttribute("aria-controls", "image-dialog");
+          iconPicker.title = "選擇圖示（目前：無）";
+          const plus = document.createElement("span");
+          plus.textContent = "＋";
+          plus.setAttribute("aria-hidden", "true");
+          const selectedIcon = document.createElement("img");
+          selectedIcon.alt = "";
+          selectedIcon.hidden = true;
+          const selectionError = document.createElement("p");
+          selectionError.className = "error icon-selection-error";
+          selectionError.setAttribute("role", "alert");
+          selectionError.hidden = true;
+          selectedIcon.addEventListener("error", () => {
+            if (!selectedIcon.hasAttribute("src")) return;
+            selectionError.textContent = `無法載入 Icons/${selectedIcon.dataset.filename}，請確認圖示存在。`;
+            selectionError.hidden = false;
+          });
+          iconPicker.append(plus, selectedIcon);
+          actions.append(iconPicker);
+          panel.append(selectionError);
+        });
+
+        const picker = element.querySelector(".landlord-picker");
+        const tenantPickers = element.querySelectorAll(".tenant-picker");
+        const group = {
+          element,
+          selectedFile: null,
+          selectedLandlordIndex: -1,
+          nirvana: Array(tenantConfigurations.length + 1).fill(false),
+          icons: Array(tenantConfigurations.length + 1).fill(null),
+          tenantSlots: tenantConfigurations.map((configuration, index) => ({
+            ...configuration,
+            button: tenantPickers[index],
+            selectedFile: null,
+          })),
+        };
+
+        element.querySelectorAll(".nirvana-button").forEach((toggle, index) => {
+          toggle.addEventListener("click", () => setNirvana(group, index, !group.nirvana[index]));
+        });
+        element.querySelectorAll(".icon-picker").forEach((iconPicker, index) => {
+          iconPicker.addEventListener("click", () => {
+            const used = new Set(groups.flatMap(current => current.icons));
+            const images = [
+              { filename: null, name: "無" },
+              ...selectableIcons.filter(icon => !used.has(icon.filename)),
+            ];
+            const currentName = group.icons[index] === null ? "無"
+              : selectableIcons.find(icon => icon.filename === group.icons[index]).name;
+            dialog.dataset.groupId = element.id;
+            openGallery(images, "Icons", group.icons[index], (image) => {
+              return selectIcon(group, index, image.filename);
+            }, `${iconPicker.dataset.label}：目前 ${currentName}`);
+          });
+        });
+        picker.addEventListener("click", () => {
+          dialog.dataset.groupId = element.id;
+          openGallery(landlordImages, "Landlord", group.selectedFile, (_image, index) => {
+            selectLandlord(group, index);
+          }, `第 ${number} 組：選擇屋主`);
+        });
+        group.tenantSlots.forEach((slot, index) => {
+          slot.button.addEventListener("click", () => {
+            if (slot.button.disabled) return;
+            dialog.dataset.groupId = element.id;
+            const images = slot.images[group.selectedLandlordIndex].map(filename => ({
+              filename, name: imageLabel(filename),
+            }));
+            openGallery(images, "Tenant", slot.selectedFile, (image) => {
+              selectTenant(group, index, image.filename);
+            }, `第 ${number} 組：選擇房客 ${index + 1}`);
+          });
+        });
+
+        for (const [button, folder] of [[picker, "Landlord"], ...group.tenantSlots.map(slot => [slot.button, "Tenant"])]) {
+          const image = button.querySelector(".preview");
+          const error = button.parentElement.querySelector(".error");
+          image.addEventListener("error", () => {
+            if (!image.hasAttribute("src")) return;
+            error.textContent = `無法載入 ${folder}/${image.dataset.filename}，請確認圖片存在。`;
+            error.hidden = false;
+          });
+        }
+
+        groupsContainer.append(element);
+        groups.push(group);
+        deleteGroupButton.hidden = groups.length <= 1;
+        updateDuplicateMarkers();
+        invalidateShareUrl();
+        return group;
+      }
+
+      function deleteGroup() {
+        if (groups.length <= 1) {
+          console.warn("至少需保留一組，無法刪除最後一組。");
+          return false;
+        }
+
+        const lastGroup = groups[groups.length - 1].element;
+        const focusedElement = document.activeElement;
+        const ownsGallery = dialog.dataset.groupId === lastGroup.id;
+        const closesGallery = ownsGallery && dialog.open;
+        if (ownsGallery) {
+          dialog.close();
+          options.replaceChildren();
+          delete dialog.dataset.groupId;
+        }
+        lastGroup.remove();
+        groups.pop();
+        deleteGroupButton.hidden = groups.length <= 1;
+        updateDuplicateMarkers();
+        invalidateShareUrl();
+        if (closesGallery || lastGroup.contains(focusedElement)
+          || (deleteGroupButton.hidden && focusedElement === deleteGroupButton)) {
+          (deleteGroupButton.hidden ? addGroupButton : deleteGroupButton).focus();
+        }
+        return true;
+      }
+
+      function selectLandlord(group, index) {
+        const image = landlordImages[index];
+        group.selectedFile = image.filename;
+        setPreview(group.element.querySelector(".landlord-picker"), "Landlord", image);
+        if (group.selectedLandlordIndex !== index) {
+          group.selectedLandlordIndex = index;
+          group.nirvana.forEach((_enabled, pickerIndex) => setNirvana(group, pickerIndex, false));
+          group.icons.forEach((_filename, pickerIndex) => selectIcon(group, pickerIndex, null));
+          group.tenantSlots.forEach(slot => resetTenant(slot, index));
+        }
+        updateDuplicateMarkers();
+        invalidateShareUrl();
+      }
+
+      function selectTenant(group, index, filename) {
+        const slot = group.tenantSlots[index];
+        if (slot.selectedFile !== filename) {
+          setNirvana(group, index + 1, false);
+          selectIcon(group, index + 1, null);
+        }
+        slot.selectedFile = filename;
+        setPreview(slot.button, "Tenant", { filename, name: imageLabel(filename) });
+        updateDuplicateMarkers();
+        invalidateShareUrl();
+      }
+
+      function updateDuplicateMarkers() {
+        const selections = groups.flatMap(group => [
+          { filename: group.selectedFile, button: group.element.querySelector(".landlord-picker") },
+          ...group.tenantSlots.map(slot => ({ filename: slot.selectedFile, button: slot.button })),
+        ]);
+        const counts = new Map();
+        if (markDuplicates) {
+          for (const { filename } of selections) {
+            if (filename !== null) counts.set(filename, (counts.get(filename) ?? 0) + 1);
+          }
+        }
+        for (const { filename, button } of selections) {
+          button.classList.toggle("is-duplicate", markDuplicates && filename !== null && counts.get(filename) > 1);
+        }
+      }
+
+      function setNirvana(group, index, enabled) {
+        group.nirvana[index] = enabled;
+        group.element.querySelectorAll(".nirvana-button")[index].setAttribute("aria-pressed", String(enabled));
+        group.element.querySelectorAll(".image-picker")[index].classList.toggle("is-nirvana", enabled);
+        invalidateShareUrl();
+      }
+
+      function selectIcon(group, index, filename) {
+        const button = group.element.querySelectorAll(".icon-picker")[index];
+        const error = button.closest(".panel").querySelector(".icon-selection-error");
+        const selectedIcon = selectableIcons.find(icon => icon.filename === filename);
+        if (filename !== null && (!selectedIcon
+          || groups.some(current => current.icons.some((icon, slotIndex) =>
+            icon === filename && (current !== group || slotIndex !== index))))) {
+          error.textContent = "此圖示不存在或已被其他位置選取，請重新開啟清單選擇。";
+          error.hidden = false;
+          if (dialog.open) {
+            galleryError.textContent = error.textContent;
+            galleryError.hidden = false;
+          }
+          return false;
+        }
+        group.icons[index] = filename;
+        const image = button.querySelector("img");
+        image.hidden = filename === null;
+        button.querySelector("span").hidden = filename !== null;
+        error.hidden = true;
+        const label = filename === null ? "無" : selectedIcon.name;
+        button.setAttribute("aria-label", `${button.dataset.label}：${label}`);
+        button.title = `選擇圖示（目前：${label}）`;
+        if (filename === null) {
+          image.removeAttribute("src");
+          delete image.dataset.filename;
+        } else {
+          image.dataset.filename = filename;
+          image.src = `./Icons/${encodeURIComponent(filename)}`;
+        }
+        invalidateShareUrl();
+        return true;
+      }
+
+      function invalidateShareUrl() {
+        shareRevision++;
+        shareResult.hidden = true;
+        shareUrlInput.value = "";
+        shareStatus.textContent = "";
+        shareStatus.className = "muted";
+      }
+
+      function validateSharedState(state) {
+        if (!state || typeof state !== "object" || Array.isArray(state) || ![1, 2, 3].includes(state.version)) {
+          throw new SharedStateError("分享設定版本不支援或格式錯誤。");
+        }
+        if (!Array.isArray(state.groups) || state.groups.length === 0) {
+          throw new SharedStateError("分享設定至少需要一組住宅。");
+        }
+        const usedIcons = new Set();
+        state.groups.forEach((savedGroup, index) => {
+          if (!savedGroup || typeof savedGroup !== "object" || Array.isArray(savedGroup)
+            || !Array.isArray(savedGroup.tenants) || savedGroup.tenants.length !== tenantConfigurations.length) {
+            throw new SharedStateError(`第 ${index + 1} 組必須包含四個房客位置。`);
+          }
+          if (state.version >= 2 && (!Array.isArray(savedGroup.nirvana)
+            || savedGroup.nirvana.length !== tenantConfigurations.length + 1
+            || !savedGroup.nirvana.every(value => typeof value === "boolean"))) {
+            throw new SharedStateError(`第 ${index + 1} 組必須包含五個有效的 Nirvana 狀態。`);
+          }
+          if (state.version === 3) {
+            if (!Array.isArray(savedGroup.icons) || savedGroup.icons.length !== tenantConfigurations.length + 1) {
+              throw new SharedStateError(`第 ${index + 1} 組必須包含五個圖示位置。`);
+            }
+            savedGroup.icons.forEach(filename => {
+              if (filename === null) return;
+              if (!selectableIcons.some(icon => icon.filename === filename)) {
+                throw new SharedStateError(`第 ${index + 1} 組包含不支援的圖示。`);
+              }
+              if (usedIcons.has(filename)) {
+                throw new SharedStateError("分享設定包含重複圖示，每個圖示只能在全頁使用一次。");
+              }
+              usedIcons.add(filename);
+            });
+          }
+          const landlordIndex = landlordImages.findIndex(image => image.filename === savedGroup.landlord);
+          if (savedGroup.landlord !== null && landlordIndex === -1) {
+            throw new SharedStateError(`第 ${index + 1} 組的屋主不在目前圖庫中。`);
+          }
+          savedGroup.tenants.forEach((filename, slotIndex) => {
+            if (filename === null) return;
+            const allowedImages = tenantConfigurations[slotIndex].images[landlordIndex];
+            if (landlordIndex === -1 || typeof filename !== "string"
+              || !Array.isArray(allowedImages) || !allowedImages.includes(filename)) {
+              throw new SharedStateError(`第 ${index + 1} 組的房客 ${slotIndex + 1} 不在此屋主允許的清單中。`);
+            }
+          });
+        });
+        return state.groups.map(savedGroup => ({
+          ...savedGroup,
+          nirvana: state.version === 1 ? Array(tenantConfigurations.length + 1).fill(false) : savedGroup.nirvana,
+          icons: state.version < 3 ? Array(tenantConfigurations.length + 1).fill(null) : savedGroup.icons,
+        }));
+      }
+
+      async function encodeSharedState(state) {
+        if (typeof CompressionStream !== "function") {
+          throw new SharedStateError("此瀏覽器不支援網址壓縮，請使用最新版瀏覽器。");
+        }
+        try {
+          const stream = new Blob([JSON.stringify(state)]).stream()
+            .pipeThrough(new CompressionStream("deflate"));
+          const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+          const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join("");
+          return compressedStatePrefix + btoa(binary)
+            .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        } catch (error) {
+          if (!(error instanceof TypeError) && !(error instanceof DOMException)) throw error;
+          throw new SharedStateError("分享設定壓縮失敗，請重試或更新瀏覽器。");
+        }
+      }
+
+      async function decodeSharedState(value) {
+        let json = value;
+        if (value.startsWith(compressedStatePrefix)) {
+          if (typeof DecompressionStream !== "function") {
+            throw new SharedStateError("此瀏覽器不支援網址解壓縮，請使用最新版瀏覽器。");
+          }
+          const payload = value.slice(compressedStatePrefix.length);
+          if (!/^[A-Za-z0-9_-]+$/.test(payload) || payload.length % 4 === 1) {
+            throw new SharedStateError("分享網址的壓縮參數格式錯誤。");
+          }
+          try {
+            const binary = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+            const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+            const stream = new Blob([bytes]).stream()
+              .pipeThrough(new DecompressionStream("deflate"));
+            json = new TextDecoder("utf-8", { fatal: true })
+              .decode(await new Response(stream).arrayBuffer());
+          } catch (error) {
+            if (!(error instanceof TypeError) && !(error instanceof DOMException)) throw error;
+            throw new SharedStateError("分享網址的壓縮資料已損壞，請重新取得連結。");
+          }
+        } else if (/^z\d+\./.test(value)) {
+          throw new SharedStateError("分享網址的壓縮版本不支援。");
+        }
+        try {
+          return JSON.parse(json);
+        } catch (error) {
+          if (!(error instanceof SyntaxError)) throw error;
+          throw new SharedStateError("網址中的設定不是有效的 JSON。");
+        }
+      }
+
+      async function generateShareUrl() {
+        invalidateShareUrl();
+        const revision = shareRevision;
+        stateError.hidden = true;
+        const state = {
+          version: 3,
+          groups: groups.map(group => ({
+            landlord: group.selectedFile,
+            tenants: group.tenantSlots.map(slot => slot.selectedFile),
+            nirvana: [...group.nirvana],
+            icons: [...group.icons],
+          })),
+        };
+        try {
+          validateSharedState(state);
+          const encodedState = await encodeSharedState(state);
+          if (revision !== shareRevision) return;
+          const url = new URL(shareBaseUrl);
+          url.searchParams.set("state", encodedState);
+          shareUrlInput.value = url.href;
+          shareResult.hidden = false;
+          shareUrlInput.focus();
+          shareUrlInput.select();
+          if (typeof navigator.clipboard?.writeText !== "function") {
+            shareStatus.className = "error";
+            shareStatus.textContent = "網址已產生，但此瀏覽器不支援自動複製。請手動複製網址欄位。";
+            return;
+          }
+          shareStatus.textContent = "網址已產生，正在複製至剪貼簿…";
+          try {
+            await navigator.clipboard.writeText(url.href);
+            if (revision !== shareRevision) return;
+            shareStatus.textContent = "分享網址已複製到剪貼簿，可直接貼上分享。連結記錄的是產生當下的設定。";
+          } catch (error) {
+            if (!(error instanceof DOMException)) throw error;
+            if (revision !== shareRevision) return;
+            shareStatus.className = "error";
+            shareStatus.textContent = "網址已產生，但瀏覽器未允許自動複製。請允許剪貼簿權限，或手動複製網址欄位。";
+          }
+        } catch (error) {
+          if (!(error instanceof SharedStateError)) throw error;
+          if (revision !== shareRevision) return;
+          stateError.textContent = `無法產生分享網址：${error.message}`;
+          stateError.hidden = false;
+        }
+      }
+
+      async function initializeGroups() {
+        const parameters = new URLSearchParams(window.location.search);
+        if (!parameters.has("state")) {
+          addGroup();
+          return;
+        }
+        const controls = [addGroupButton, deleteGroupButton, shareSettingsButton];
+        controls.forEach(button => { button.disabled = true; });
+        groupsContainer.setAttribute("aria-busy", "true");
+        try {
+          if (parameters.getAll("state").length !== 1) {
+            throw new SharedStateError("網址中有重複的 state 參數。");
+          }
+          const state = await decodeSharedState(parameters.get("state"));
+          const savedGroups = validateSharedState(state);
+          for (const savedGroup of savedGroups) {
+            const group = addGroup();
+            if (savedGroup.landlord !== null) {
+              selectLandlord(group, landlordImages.findIndex(image => image.filename === savedGroup.landlord));
+              savedGroup.tenants.forEach((filename, index) => {
+                if (filename !== null) selectTenant(group, index, filename);
+              });
+            }
+            savedGroup.nirvana.forEach((enabled, index) => setNirvana(group, index, enabled));
+            savedGroup.icons.forEach((filename, index) => selectIcon(group, index, filename));
+          }
+        } catch (error) {
+          if (!(error instanceof SharedStateError)) throw error;
+          stateError.textContent = `無法還原分享設定：${error.message} 目前顯示一組空白住宅。`;
+          stateError.hidden = false;
+          addGroup();
+        } finally {
+          controls.forEach(button => { button.disabled = false; });
+          groupsContainer.removeAttribute("aria-busy");
+        }
+      }
+
+      function imageLabel(filename) {
+        const label = filename.replace(/\.[^.]+$/, "");
+        return label.charAt(0).toUpperCase() + label.slice(1);
+      }
+
+      function setPreview(button, folder, { filename, name: label }) {
+        const image = button.querySelector(".preview");
+        button.parentElement.querySelector(".error").hidden = true;
+        image.dataset.filename = filename;
+        image.alt = label;
+        image.src = `./${folder}/${encodeURIComponent(filename)}`;
+        image.hidden = false;
+        button.querySelector(".placeholder").hidden = true;
+        button.querySelector("strong").textContent = folder === "Landlord" ? label : "";
+      }
+
+      function resetTenant(slot, selectedLandlordIndex) {
+        slot.selectedFile = null;
+        const tenantPicker = slot.button;
+        const image = tenantPicker.querySelector(".preview");
+        image.hidden = true;
+        image.removeAttribute("src");
+        image.alt = "";
+        delete image.dataset.filename;
+        tenantPicker.querySelector(".placeholder").hidden = false;
+        const error = tenantPicker.parentElement.querySelector(".error");
+        error.hidden = true;
+        const filenames = slot.images[selectedLandlordIndex];
+        const valid = Array.isArray(filenames)
+          && filenames.every(filename => typeof filename === "string" && filename.trim().length > 0);
+        if (!valid) {
+          tenantPicker.disabled = true;
+          tenantPicker.querySelector("strong").textContent = "房客清單設定錯誤";
+          error.textContent = `請將 ${slot.arrayName}[${selectedLandlordIndex}] 設定為圖片檔名陣列。`;
+          error.hidden = false;
+          return;
+        }
+        tenantPicker.disabled = filenames.length === 0;
+        tenantPicker.querySelector("strong").textContent = filenames.length === 0
+          ? "此屋主尚未設定可選房客"
+          : "點擊選擇房客";
+      }
+
+      function openGallery(images, folder, selected, onSelect, title = "選擇屋主") {
+        options.replaceChildren();
+        galleryError.hidden = true;
+        dialog.setAttribute("aria-label", title);
+        images.forEach((entry, index) => {
+          const { filename, name: label } = entry;
+          const option = document.createElement("button");
+          option.type = "button";
+          option.className = "image-option";
+          option.dataset.filename = filename ?? "";
+          option.setAttribute("aria-label", `選擇 ${label}`);
+          option.setAttribute("aria-pressed", String(filename === selected));
+
+          if (filename !== null) {
+            const image = document.createElement("img");
+            image.alt = "";
+            image.addEventListener("error", () => {
+              if (!option.isConnected) return;
+              option.disabled = true;
+              option.title = `無法載入 ${filename}`;
+              galleryError.textContent = `部分圖片無法載入，請確認 ${folder} 中的檔名與圖片陣列一致。`;
+              galleryError.hidden = false;
+            });
+            image.src = `./${folder}/${encodeURIComponent(filename)}`;
+            option.append(image);
+          } else {
+            option.classList.add("image-option-none");
+          }
+          if (folder !== "Tenant") {
+            const caption = document.createElement("span");
+            caption.textContent = label;
+            option.append(caption);
+          }
+          option.addEventListener("click", () => {
+            if (onSelect(entry, index) === false) return;
+            dialog.close();
+          });
+          options.append(option);
+        });
+        dialog.showModal();
+      }
+
+      initializeGroups();
+    </script>
+  </body>
+</html>
