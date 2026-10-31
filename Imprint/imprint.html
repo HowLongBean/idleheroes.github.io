@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="黑底互動技能樹：盾牌、劍、向上箭頭的已選取節點與兩端皆選取的連接線，分別呈現亮藍、亮紅、亮綠色。">
+    <title>互動技能樹</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --inactive: #fff;
+        --active: #ff2038;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #000;
+        color: #fff;
+        font-family: system-ui, sans-serif;
+      }
+
+      main {
+        max-width: 768px;
+        margin-inline: auto;
+      }
+
+      .tree-switcher {
+        display: flex;
+        justify-content: center;
+        gap: clamp(8px, 3vw, 24px);
+        padding: 16px;
+      }
+
+      .tree-choice {
+        flex: 0 1 128px;
+        min-width: 0;
+        padding: 4px;
+        border: 2px solid transparent;
+        border-radius: 12px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      .tree-choice:hover {
+        background: #141414;
+      }
+
+      .tree-choice[aria-pressed="true"] {
+        border-color: #fff;
+        background: #141414;
+      }
+
+      .tree-choice:focus-visible {
+        outline: 2px solid #ffd166;
+        outline-offset: 3px;
+      }
+
+      .tree-choice img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .tree-cost {
+        display: block;
+        margin-top: 4px;
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .budget-summary {
+        margin: 0 16px 8px;
+        text-align: center;
+        line-height: 1.5;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tree-scroll {
+        overflow-x: auto;
+      }
+
+      .tree-scroll[data-tree="shield"] {
+        --active: #20a0ff;
+      }
+
+      .tree-scroll[data-tree="arrow"] {
+        --active: #20ff60;
+      }
+
+      .skill-tree {
+        display: block;
+        width: 100%;
+        max-width: 768px;
+        height: auto;
+      }
+
+      .node-color,
+      .connection {
+        fill: var(--inactive);
+      }
+
+      .is-selected {
+        fill: var(--active);
+      }
+
+      .node {
+        cursor: pointer;
+        outline: none;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .hit-area {
+        fill: transparent;
+        pointer-events: all;
+      }
+
+      .focus-ring {
+        fill: none;
+        stroke: #ffd166;
+        stroke-width: 2;
+        stroke-dasharray: 4 4;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .node:focus-visible .focus-ring {
+        visibility: visible;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      .message {
+        margin: 1rem;
+        line-height: 1.6;
+      }
+
+      .error {
+        color: #ff9a9a;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app" aria-busy="true">
+      <h1 class="sr-only" id="tree-title">盾牌技能樹</h1>
+      <p class="sr-only" id="tree-description">
+        頂端的盾牌、劍、弓箭按鈕可切換各自獨立的技能樹，一次只顯示一份，切換時保留各自的選取狀態。
+        每份技能樹包含三組節點，每組有三個起始節點，再分為左右兩條各八個節點的分支。
+        點擊可選取或取消選取；Tab 可切換節點，Enter 或空白鍵可切換選取狀態。
+        三份技能樹共用 63 點消耗上限，各分支第 8 個節點消耗 2 點，其餘節點消耗 1 點。
+        點數足夠時，啟用節點會一併啟用所有前置節點，分支節點也包含該組的三個起始節點，已啟用節點不重複計費。
+        若超過上限，只會沿目標節點的前置路徑由前往後啟用到剛好 63 點；無法剛好達到時不變更任何節點。
+        取消節點會一併停用所有依賴它的後續節點；不依賴此節點的分支與其他組技能樹不受影響。
+        停用節點會退回對應消耗，三個圖標下方分別顯示各份技能樹的目前消耗。
+        未選取時保留灰階圖案；選取後圓圈與中心圖案的顏色，盾牌為亮藍色、劍為亮紅色、向上箭頭為亮綠色。
+        只有相鄰兩端節點都選取時，連接線才會套用該技能樹的顏色。
+        圖形會依螢幕寬度等比例縮放，最大不超過原圖大小；重新整理後會清除三份技能樹的選取。
+      </p>
+      <nav class="tree-switcher" aria-label="選擇技能樹">
+        <button type="button" class="tree-choice" id="choose-shield" data-tree="shield"
+          aria-label="盾牌技能樹" aria-pressed="true" aria-controls="tree-scroll" aria-describedby="cost-shield">
+          <img src="Icons/shield_blue.png" alt="藍色盾牌" width="320" height="320" draggable="false">
+          <span class="tree-cost" id="cost-shield"><span class="cost-value">0</span></span>
+        </button>
+        <button type="button" class="tree-choice" id="choose-sword" data-tree="sword"
+          aria-label="劍技能樹" aria-pressed="false" aria-controls="tree-scroll" aria-describedby="cost-sword">
+          <img src="Icons/sword_red.png" alt="紅色劍" width="320" height="320" draggable="false">
+          <span class="tree-cost" id="cost-sword"><span class="cost-value">0</span></span>
+        </button>
+        <button type="button" class="tree-choice" id="choose-arrow" data-tree="arrow"
+          aria-label="弓箭技能樹" aria-pressed="false" aria-controls="tree-scroll" aria-describedby="cost-arrow">
+          <img src="Icons/arrow_green.png" alt="綠色弓箭" width="320" height="320" draggable="false">
+          <span class="tree-cost" id="cost-arrow"><span class="cost-value">0</span></span>
+        </button>
+      </nav>
+      <p class="budget-summary">
+        總消耗 <span id="total-cost">0</span> / <span id="budget-limit">63</span>
+        （剩餘 <span id="remaining-cost">63</span> 點）
+      </p>
+      <p class="message error" id="icon-error" role="alert" hidden>
+        無法載入部分按鈕圖片。請確認 imprint.html 旁的 Icons 資料夾內含 shield_blue.png、
+        sword_red.png、arrow_green.png，再重新整理。
+      </p>
+      <p class="message" id="loading" role="status">正在載入技能樹…</p>
+      <p class="message error" id="label-error" role="alert" hidden></p>
+      <p class="message error" id="load-error" role="alert" hidden>
+        無法載入技能樹圖片。請確認 imprint.html 旁的 Icons 資料夾內含 tree.png，再重新整理。
+      </p>
+      <div class="tree-scroll" id="tree-scroll" data-tree="shield" hidden>
+        <svg
+          class="skill-tree"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 768 1034"
+          role="group"
+          aria-labelledby="tree-title"
+          aria-describedby="tree-description"
+        >
+          <defs>
+            <mask id="art-mask" maskUnits="userSpaceOnUse"
+              x="0" y="0" width="768" height="1034" style="mask-type: luminance">
+              <image id="artwork" width="768" height="1034"/>
+            </mask>
+          </defs>
+          <g mask="url(#art-mask)" aria-hidden="true">
+            <rect width="768" height="1034" fill="var(--inactive)"/>
+            <g id="connections"></g>
+            <g id="node-colors"></g>
+          </g>
+          <g id="node-buttons"></g>
+        </svg>
+      </div>
+      <noscript>
+        <p class="message error">此技能樹需要 JavaScript，請啟用後重新載入頁面。</p>
+      </noscript>
+    </main>
+    <script src="node-labels.js"></script>
+    <script>
+      "use strict";
+
+      const svgNamespace = "http://www.w3.org/2000/svg";
+      const nodeSize = 76;
+      const budgetLimit = 63;
+      const treeChoices = Array.from(document.querySelectorAll(".tree-choice"));
+      const selectionsByTree = new Map(
+        treeChoices.map((button) => [button.dataset.tree, new Set()]),
+      );
+      let activeTree = "shield";
+      let selectedNodes = selectionsByTree.get(activeTree);
+      const nodes = [];
+      const connections = [];
+      const rootRows = [56, 148, 240];
+      const branchRows = [333, 425, 517, 610, 702, 794, 886, 978];
+      const trees = [
+        { rootX: 135, leftX: 55, rightX: 214 },
+        { rootX: 384, leftX: 304, rightX: 463 },
+        { rootX: 633, leftX: 554, rightX: 713 },
+      ];
+
+      const labelData = typeof NODE_LABELS === "undefined" ? undefined : NODE_LABELS;
+
+      function validateLabels(labels, count, path) {
+        if (!Array.isArray(labels) || labels.length !== count
+          || Array.from(labels).some((label) => typeof label !== "string" || label.trim() === "")) {
+          const message = `節點名稱設定錯誤：${path} 必須包含 ${count} 個非空白文字。請檢查與 imprint.html 同資料夾的 node-labels.js。`;
+          const error = document.getElementById("label-error");
+          error.textContent = message;
+          error.hidden = false;
+          document.getElementById("loading").hidden = true;
+          document.getElementById("app").setAttribute("aria-busy", "false");
+          for (const choice of treeChoices) {
+            choice.disabled = true;
+          }
+          throw new Error(message);
+        }
+      }
+
+      validateLabels(labelData?.roots, rootRows.length, "roots");
+      for (const choice of treeChoices) {
+        for (let group = 1; group <= trees.length; group++) {
+          for (const side of ["left", "right"]) {
+            validateLabels(
+              labelData?.branches?.[choice.dataset.tree]?.[`group${group}`]?.[side],
+              branchRows.length,
+              `branches.${choice.dataset.tree}.group${group}.${side}`,
+            );
+          }
+        }
+      }
+
+      for (const [treeIndex, tree] of trees.entries()) {
+        const prefix = `tree-${treeIndex + 1}`;
+        rootRows.forEach((y, index) => {
+          const id = `${prefix}-root-${index + 1}`;
+          nodes.push({
+            id, x: tree.rootX, y,
+            cost: 1,
+            group: treeIndex + 1, side: "root", labelIndex: index,
+          });
+          if (index > 0) {
+            connections.push({ from: `${prefix}-root-${index}`, to: id });
+          }
+        });
+
+        for (const [side, x] of [
+          ["left", tree.leftX],
+          ["right", tree.rightX],
+        ]) {
+          branchRows.forEach((y, index) => {
+            const id = `${prefix}-${side}-${index + 1}`;
+            nodes.push({
+              id, x, y,
+              cost: index === 7 ? 2 : 1,
+              group: treeIndex + 1, side, labelIndex: index,
+            });
+            connections.push({
+              from: index === 0 ? `${prefix}-root-3` : `${prefix}-${side}-${index}`,
+              to: id,
+            });
+          });
+        }
+      }
+
+      function createSvgElement(tag, attributes) {
+        const element = document.createElementNS(svgNamespace, tag);
+        for (const [name, value] of Object.entries(attributes)) {
+          element.setAttribute(name, String(value));
+        }
+        return element;
+      }
+
+      const nodesById = new Map(nodes.map((node) => [node.id, node]));
+      const parentById = new Map(connections.map(({ from, to }) => [to, from]));
+      const childrenById = new Map(nodes.map((node) => [node.id, []]));
+      for (const { from, to } of connections) {
+        childrenById.get(from).push(to);
+      }
+      const nodeElements = [];
+      const connectionLayer = document.getElementById("connections");
+      const colorLayer = document.getElementById("node-colors");
+      const buttonLayer = document.getElementById("node-buttons");
+
+      // The image mask preserves the original texture; node colors cover line endpoints.
+      const connectionElements = connections.map((connection) => {
+        const from = nodesById.get(connection.from);
+        const to = nodesById.get(connection.to);
+        const vertical = from.x === to.x;
+        const element = createSvgElement("rect", {
+          class: "connection",
+          "data-from": from.id,
+          "data-to": to.id,
+          x: vertical ? from.x - 12 : Math.min(from.x, to.x),
+          y: from.y,
+          width: vertical ? 24 : Math.abs(from.x - to.x),
+          height: to.y - from.y,
+        });
+        connectionLayer.append(element);
+        return { ...connection, element };
+      });
+
+      function deactivateNode(id) {
+        selectedNodes.delete(id);
+        for (const childId of childrenById.get(id)) {
+          deactivateNode(childId);
+        }
+      }
+
+      function getSelectionCost(selection) {
+        let cost = 0;
+        for (const id of selection) {
+          cost += nodesById.get(id).cost;
+        }
+        return cost;
+      }
+
+      function getTotalCost() {
+        let total = 0;
+        for (const selection of selectionsByTree.values()) {
+          total += getSelectionCost(selection);
+        }
+        return total;
+      }
+
+      function toggleNode(id) {
+        if (selectedNodes.has(id)) {
+          deactivateNode(id);
+        } else {
+          const path = [];
+          for (let current = id; current !== undefined; current = parentById.get(current)) {
+            if (!selectedNodes.has(current)) {
+              path.push(current);
+            }
+          }
+          path.reverse();
+          const remaining = budgetLimit - getTotalCost();
+          const pending = [];
+          let addedCost = 0;
+          for (const nodeId of path) {
+            const cost = nodesById.get(nodeId).cost;
+            if (addedCost + cost > remaining) {
+              break;
+            }
+            pending.push(nodeId);
+            addedCost += cost;
+          }
+          const complete = pending.length === path.length;
+          if (complete || (pending.length > 0 && addedCost === remaining)) {
+            for (const nodeId of pending) {
+              selectedNodes.add(nodeId);
+            }
+          }
+        }
+        renderSelection();
+      }
+
+      function renderSelection() {
+        for (const node of nodeElements) {
+          const data = nodesById.get(node.id);
+          const label = data.side === "root"
+            ? labelData.roots[data.labelIndex]
+            : labelData.branches[activeTree][`group${data.group}`][data.side][data.labelIndex];
+          node.button.setAttribute("aria-label", label);
+          node.title.textContent = label;
+          const selected = selectedNodes.has(node.id);
+          node.button.setAttribute("aria-pressed", String(selected));
+          node.color.classList.toggle("is-selected", selected);
+        }
+        for (const connection of connectionElements) {
+          connection.element.classList.toggle(
+            "is-selected",
+            selectedNodes.has(connection.from) && selectedNodes.has(connection.to),
+          );
+        }
+        for (const choice of treeChoices) {
+          choice.querySelector(".cost-value").textContent = String(
+            getSelectionCost(selectionsByTree.get(choice.dataset.tree)),
+          );
+        }
+        const total = getTotalCost();
+        document.getElementById("total-cost").textContent = String(total);
+        document.getElementById("budget-limit").textContent = String(budgetLimit);
+        document.getElementById("remaining-cost").textContent = String(budgetLimit - total);
+      }
+
+      for (const node of nodes) {
+        const bounds = {
+          x: node.x - nodeSize / 2,
+          y: node.y - nodeSize / 2,
+          width: nodeSize,
+          height: nodeSize,
+        };
+        const color = createSvgElement("rect", {
+          ...bounds, class: "node-color", "data-node": node.id,
+        });
+        colorLayer.append(color);
+
+        const button = createSvgElement("g", {
+          id: node.id,
+          class: "node",
+          role: "button",
+          tabindex: 0,
+          "aria-pressed": "false",
+          "data-cost": node.cost,
+        });
+        const title = createSvgElement("title", {});
+        button.append(
+          title,
+          createSvgElement("rect", { ...bounds, class: "hit-area", "aria-hidden": "true" }),
+          createSvgElement("rect", {
+            class: "focus-ring",
+            x: bounds.x - 3,
+            y: bounds.y - 3,
+            width: nodeSize + 6,
+            height: nodeSize + 6,
+            rx: 12,
+            "aria-hidden": "true",
+          }),
+        );
+        nodeElements.push({ id: node.id, button, color, title });
+        button.addEventListener("click", () => toggleNode(node.id));
+        button.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            if (!event.repeat) {
+              toggleNode(node.id);
+            }
+          }
+        });
+        buttonLayer.append(button);
+      }
+
+      renderSelection();
+
+      for (const button of treeChoices) {
+        button.addEventListener("click", () => {
+          activeTree = button.dataset.tree;
+          selectedNodes = selectionsByTree.get(activeTree);
+          for (const choice of treeChoices) {
+            choice.setAttribute("aria-pressed", String(choice === button));
+          }
+          document.getElementById("tree-title").textContent = button.getAttribute("aria-label");
+          document.getElementById("tree-scroll").dataset.tree = button.dataset.tree;
+          renderSelection();
+        });
+
+        const icon = button.querySelector("img");
+        const showIconError = () => {
+          document.getElementById("icon-error").hidden = false;
+        };
+        icon.addEventListener("error", showIconError);
+        if (icon.complete && icon.naturalWidth === 0) {
+          showIconError();
+        }
+      }
+
+      const artwork = document.getElementById("artwork");
+      artwork.addEventListener("load", () => {
+        document.getElementById("loading").hidden = true;
+        document.getElementById("load-error").hidden = true;
+        document.getElementById("tree-scroll").hidden = false;
+        document.getElementById("app").setAttribute("aria-busy", "false");
+      });
+      artwork.addEventListener("error", () => {
+        document.getElementById("loading").hidden = true;
+        document.getElementById("tree-scroll").hidden = true;
+        document.getElementById("load-error").hidden = false;
+        document.getElementById("app").setAttribute("aria-busy", "false");
+      });
+      artwork.setAttribute("href", "Icons/tree.png");
+    </script>
+  </body>
+</html>
