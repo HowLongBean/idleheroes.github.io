@@ -30,14 +30,20 @@
       }
 
       .tree-switcher {
-        display: flex;
+        --tool-icon-size: clamp(32px, 6vw, 48px);
+        --tree-gap: clamp(8px, 3vw, 24px);
+        display: grid;
+        grid-template-columns: minmax(var(--tool-icon-size), 1fr) repeat(3, minmax(0, 128px)) minmax(var(--tool-icon-size), 1fr);
         justify-content: center;
-        gap: clamp(8px, 3vw, 24px);
+        gap: var(--tree-gap);
         padding: 16px;
       }
 
+      .tree-switcher > .tree-choice:first-child {
+        grid-column: 2;
+      }
+
       .tree-choice {
-        flex: 0 1 128px;
         min-width: 0;
         padding: 4px;
         border: 2px solid transparent;
@@ -49,7 +55,7 @@
         touch-action: manipulation;
       }
 
-      .tree-choice:hover {
+      .tree-choice:hover, .tree-tool:hover:not(:disabled) {
         background: #141414;
       }
 
@@ -58,7 +64,7 @@
         background: #141414;
       }
 
-      .tree-choice:focus-visible {
+      .tree-choice:focus-visible, .tree-tool:focus-visible, #share-url:focus-visible {
         outline: 2px solid #ffd166;
         outline-offset: 3px;
       }
@@ -75,6 +81,60 @@
         font-size: 14px;
         font-variant-numeric: tabular-nums;
       }
+
+      .arrow-tools {
+        position: relative;
+        min-width: 0;
+      }
+
+      .arrow-tools > .tree-choice {
+        display: block;
+        width: 100%;
+      }
+
+      .tree-tools {
+        position: absolute;
+        top: 6px;
+        left: calc(100% + var(--tree-gap));
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: clamp(4px, 1vw, 8px);
+        /* Solid artwork starts at y=47 in both 320px icons; the arrow has a 6px inset. */
+        padding-top: calc((100% - 12px - var(--tool-icon-size)) * 47 / 320);
+      }
+
+      .tree-tools img {
+        display: block;
+        width: var(--tool-icon-size);
+        height: auto;
+      }
+
+      .tree-tool {
+        display: block;
+        padding: 0;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      .tree-tool:disabled { cursor: not-allowed; opacity: .5; }
+      #share-result { margin: 16px; }
+      #share-result label { display: block; margin-bottom: 8px; }
+      #share-url {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #526583;
+        border-radius: 8px;
+        background: #141414;
+        color: inherit;
+        font: inherit;
+      }
+      #share-status { line-height: 1.6; }
+      .muted { color: #aab8cd; }
 
       .budget-summary {
         margin: 0 16px 8px;
@@ -187,7 +247,8 @@
         停用節點會退回對應消耗，三個圖標下方分別顯示各份技能樹的目前消耗。
         未選取時保留灰階圖案；選取後圓圈與中心圖案的顏色，盾牌為亮藍色、劍為亮紅色、向上箭頭為亮綠色。
         只有相鄰兩端節點都選取時，連接線才會套用該技能樹的顏色。
-        圖形會依螢幕寬度等比例縮放，最大不超過原圖大小；重新整理後會清除三份技能樹的選取。
+        儲存按鈕可產生分享網址，只記錄三份技能樹的選取；開啟分享網址時預設顯示盾牌技能樹。
+        圖形會依螢幕寬度等比例縮放，最大不超過原圖大小；一般網址重新整理後會清除選取，分享網址則還原儲存當下的設定。
       </p>
       <nav class="tree-switcher" aria-label="選擇技能樹">
         <button type="button" class="tree-choice" id="choose-shield" data-tree="shield"
@@ -200,19 +261,36 @@
           <img src="Icons/sword_red.png" alt="紅色劍" width="320" height="320" draggable="false">
           <span class="tree-cost" id="cost-sword"><span class="cost-value">0</span></span>
         </button>
-        <button type="button" class="tree-choice" id="choose-arrow" data-tree="arrow"
-          aria-label="弓箭技能樹" aria-pressed="false" aria-controls="tree-scroll" aria-describedby="cost-arrow">
-          <img src="Icons/arrow_green.png" alt="綠色弓箭" width="320" height="320" draggable="false">
-          <span class="tree-cost" id="cost-arrow"><span class="cost-value">0</span></span>
-        </button>
+        <div class="arrow-tools">
+          <button type="button" class="tree-choice" id="choose-arrow" data-tree="arrow"
+            aria-label="弓箭技能樹" aria-pressed="false" aria-controls="tree-scroll" aria-describedby="cost-arrow">
+            <img src="Icons/arrow_green.png" alt="綠色弓箭" width="320" height="320" draggable="false">
+            <span class="tree-cost" id="cost-arrow"><span class="cost-value">0</span></span>
+          </button>
+          <div class="tree-tools">
+            <button type="button" class="tree-tool" id="show-info" aria-label="資訊" title="資訊（功能尚未開放）">
+              <img src="Icons/info_violet.png" alt="" width="320" height="320" draggable="false">
+            </button>
+            <button type="button" class="tree-tool" id="share-settings" aria-label="產生分享網址"
+              title="產生分享網址" aria-controls="share-result" disabled>
+              <img src="Icons/save_gold.png" alt="" width="320" height="320" draggable="false">
+            </button>
+          </div>
+        </div>
       </nav>
       <p class="budget-summary">
         總消耗 <span id="total-cost">0</span> / <span id="budget-limit">63</span>
         （剩餘 <span id="remaining-cost">63</span> 點）
       </p>
+      <div id="share-result" hidden>
+        <label for="share-url">分享網址</label>
+        <input id="share-url" type="text" readonly>
+        <p id="share-status" class="muted" role="status"></p>
+      </div>
+      <p class="message error" id="state-error" role="alert" hidden></p>
       <p class="message error" id="icon-error" role="alert" hidden>
-        無法載入部分按鈕圖片。請確認 imprint.html 旁的 Icons 資料夾內含 shield_blue.png、
-        sword_red.png、arrow_green.png，再重新整理。
+        無法載入部分圖示。請確認 imprint.html 旁的 Icons 資料夾內含 shield_blue.png、
+        sword_red.png、arrow_green.png、info_violet.png、save_gold.png，再重新整理。
       </p>
       <p class="message" id="loading" role="status">正在載入技能樹…</p>
       <p class="message error" id="label-error" role="alert" hidden></p>
@@ -247,6 +325,7 @@
       </noscript>
     </main>
     <script src="node-labels.js"></script>
+    <script src="../shared-state.js"></script>
     <script>
       "use strict";
 
@@ -259,6 +338,14 @@
       );
       let activeTree = "shield";
       let selectedNodes = selectionsByTree.get(activeTree);
+      const shareBaseUrl = "https://howlongbean.github.io/idleheroes.github.io/Imprint/imprint.html";
+      const shareSettingsButton = document.getElementById("share-settings");
+      const stateError = document.getElementById("state-error");
+      const { invalidateShareUrl, generateShareUrl } = createShareControls({
+        baseUrl: shareBaseUrl,
+        getState: getSharedState,
+        validateState: validateSharedState,
+      });
       const nodes = [];
       const connections = [];
       const rootRows = [56, 148, 240];
@@ -393,6 +480,91 @@
         return total;
       }
 
+      function getSharedState() {
+        return {
+          version: 1,
+          selections: Object.fromEntries(
+            Array.from(selectionsByTree, ([tree, selection]) => [tree, [...selection]]),
+          ),
+        };
+      }
+
+      function validateSharedState(state) {
+        if (!state || typeof state !== "object" || Array.isArray(state) || state.version !== 1) {
+          throw new SharedStateError("分享設定版本不支援或格式錯誤。");
+        }
+        if (!state.selections || typeof state.selections !== "object" || Array.isArray(state.selections)
+          || Object.keys(state.selections).length !== selectionsByTree.size) {
+          throw new SharedStateError("分享設定必須包含三份技能樹。");
+        }
+        const restoredSelections = new Map();
+        let total = 0;
+        for (const tree of selectionsByTree.keys()) {
+          const ids = state.selections[tree];
+          if (!Array.isArray(ids) || ids.length > nodes.length
+            || ids.some(id => typeof id !== "string" || !nodesById.has(id))) {
+            throw new SharedStateError("分享設定包含無效的技能樹節點。");
+          }
+          const selection = new Set(ids);
+          if (selection.size !== ids.length) {
+            throw new SharedStateError("分享設定包含重複的技能樹節點。");
+          }
+          for (const id of selection) {
+            const parent = parentById.get(id);
+            if (parent !== undefined && !selection.has(parent)) {
+              throw new SharedStateError("分享設定缺少技能樹的前置節點。");
+            }
+          }
+          total += getSelectionCost(selection);
+          restoredSelections.set(tree, selection);
+        }
+        if (total > budgetLimit) {
+          throw new SharedStateError(`分享設定的總消耗超過 ${budgetLimit} 點。`);
+        }
+        return restoredSelections;
+      }
+
+      async function initializeSelections() {
+        const treeScroll = document.getElementById("tree-scroll");
+        const controls = [...treeChoices, shareSettingsButton];
+        controls.forEach(button => { button.disabled = true; });
+        treeScroll.inert = true;
+        try {
+          const parameters = new URLSearchParams(window.location.search);
+          if (!parameters.has("state")) return;
+          if (parameters.getAll("state").length !== 1) {
+            throw new SharedStateError("網址中有重複的 state 參數。");
+          }
+          const state = await decodeSharedState(parameters.get("state"));
+          const restoredSelections = validateSharedState(state);
+          for (const [tree, selection] of restoredSelections) {
+            selectionsByTree.set(tree, selection);
+          }
+          setActiveTree("shield");
+        } catch (error) {
+          if (!(error instanceof SharedStateError)) throw error;
+          stateError.textContent = `無法還原分享設定：${error.message} 目前顯示空白技能樹。`;
+          stateError.hidden = false;
+        } finally {
+          controls.forEach(button => { button.disabled = false; });
+          treeScroll.inert = false;
+        }
+      }
+
+      function setActiveTree(tree) {
+        activeTree = tree;
+        selectedNodes = selectionsByTree.get(activeTree);
+        for (const choice of treeChoices) {
+          const active = choice.dataset.tree === activeTree;
+          choice.setAttribute("aria-pressed", String(active));
+          if (active) {
+            document.getElementById("tree-title").textContent = choice.getAttribute("aria-label");
+          }
+        }
+        document.getElementById("tree-scroll").dataset.tree = activeTree;
+        renderSelection();
+      }
+
       function toggleNode(id) {
         if (selectedNodes.has(id)) {
           deactivateNode(id);
@@ -422,6 +594,7 @@
             }
           }
         }
+        invalidateShareUrl();
         renderSelection();
       }
 
@@ -505,17 +678,14 @@
 
       for (const button of treeChoices) {
         button.addEventListener("click", () => {
-          activeTree = button.dataset.tree;
-          selectedNodes = selectionsByTree.get(activeTree);
-          for (const choice of treeChoices) {
-            choice.setAttribute("aria-pressed", String(choice === button));
-          }
-          document.getElementById("tree-title").textContent = button.getAttribute("aria-label");
-          document.getElementById("tree-scroll").dataset.tree = button.dataset.tree;
-          renderSelection();
+          setActiveTree(button.dataset.tree);
         });
+      }
 
-        const icon = button.querySelector("img");
+      shareSettingsButton.addEventListener("click", generateShareUrl);
+      initializeSelections();
+
+      for (const icon of document.querySelectorAll(".tree-switcher img")) {
         const showIconError = () => {
           document.getElementById("icon-error").hidden = false;
         };
