@@ -94,12 +94,12 @@
 
       .tree-tools {
         position: absolute;
-        top: 6px;
+        /* Keep the save button in its original lower slot. */
+        top: calc(6px + var(--tool-icon-size) + clamp(4px, 1vw, 8px));
         left: calc(100% + var(--tree-gap));
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        gap: clamp(4px, 1vw, 8px);
         /* Solid artwork starts at y=47 in both 320px icons; the arrow has a 6px inset. */
         padding-top: calc((100% - 12px - var(--tool-icon-size)) * 47 / 320);
       }
@@ -268,9 +268,6 @@
             <span class="tree-cost" id="cost-arrow"><span class="cost-value">0</span></span>
           </button>
           <div class="tree-tools">
-            <button type="button" class="tree-tool" id="show-info" aria-label="資訊" title="資訊（功能尚未開放）">
-              <img src="Icons/info_violet.png" alt="" width="320" height="320" draggable="false">
-            </button>
             <button type="button" class="tree-tool" id="share-settings" aria-label="產生分享網址"
               title="產生分享網址" aria-controls="share-result" disabled>
               <img src="Icons/save_gold.png" alt="" width="320" height="320" draggable="false">
@@ -290,7 +287,7 @@
       <p class="message error" id="state-error" role="alert" hidden></p>
       <p class="message error" id="icon-error" role="alert" hidden>
         無法載入部分圖示。請確認 imprint.html 旁的 Icons 資料夾內含 shield_blue.png、
-        sword_red.png、arrow_green.png、info_violet.png、save_gold.png，再重新整理。
+        sword_red.png、arrow_green.png、save_gold.png，再重新整理。
       </p>
       <p class="message" id="loading" role="status">正在載入技能樹…</p>
       <p class="message error" id="label-error" role="alert" hidden></p>
