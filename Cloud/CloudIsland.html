@@ -62,11 +62,19 @@
         min-height: clamp(24px, 4cqw, 56px);
         margin-bottom: clamp(4px, 1.25cqw, 20px);
       }
-      .panel-actions { display: flex; gap: 2px; margin-left: auto; }
-      .nirvana-button, .icon-picker {
-        flex-shrink: 0;
-        width: clamp(24px, 4cqw, 56px);
-        height: clamp(24px, 4cqw, 56px);
+      .panel-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 2px;
+        width: calc(3 * clamp(24px, 4cqw, 56px) + 4px);
+        max-width: 100%;
+        min-width: 0;
+        margin-left: auto;
+      }
+      .nirvana-button, .icon-picker, .slot-picker {
+        width: 100%;
+        min-width: 0;
+        aspect-ratio: 1;
         padding: 1px;
         border: 1px solid transparent;
         border-radius: 4px;
@@ -77,10 +85,27 @@
         align-items: center;
         justify-content: center;
         border-color: #526583;
-        font-size: clamp(18px, 1.5cqw, 24px);
+        font-size: clamp(10px, 3cqw, 24px);
       }
-      .icon-picker:hover { background: #34425a; }
+      .icon-picker:hover, .slot-picker:hover { background: #34425a; }
       .icon-picker img { width: 100%; height: 100%; object-fit: contain; }
+      .slot-picker {
+        display: grid;
+        grid-template-rows: repeat(5, minmax(0, 1fr));
+        padding: 0;
+        border-color: #aab8cd;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .slot-cell { min-height: 0; }
+      .slot-cell + .slot-cell { border-top: 1px solid #aab8cd; }
+      .slot-color { background: var(--slot-color, #142035); }
+      .slot-color[data-color="red"] { --slot-color: #ef4444; }
+      .slot-color[data-color="blue"] { --slot-color: #3b82f6; }
+      .slot-color[data-color="ochre"] { --slot-color: #c49a46; }
+      .slot-color[data-color="green"] { --slot-color: #22c55e; }
+      .slot-color[data-color="purple"] { --slot-color: #a855f7; }
+      .slot-color[data-color="pink"] { --slot-color: #ec4899; }
       .nirvana-button img {
         display: block;
         width: 100%;
@@ -177,6 +202,37 @@
       .image-option img { width: 94px; height: 99px; object-fit: contain; }
       .image-option span { max-width: 100%; overflow-wrap: anywhere; font-size: .85rem; }
       .image-option-none { min-height: 128px; justify-content: center; }
+      .core-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .core-options .image-option img { width: min(94px, 100%); height: auto; aspect-ratio: 1; }
+      #clear-core { margin-top: 16px; }
+      .slot-options {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: clamp(8px, 3vw, 24px);
+        row-gap: 8px;
+        margin-top: 24px;
+      }
+      .slot-label {
+        grid-column: 1;
+        grid-row: 2;
+        justify-self: center;
+        font-size: clamp(12px, 2vw, 16px);
+      }
+      .slot-circle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        justify-self: center;
+        width: 100%;
+        max-width: 88px;
+        aspect-ratio: 1;
+        padding: 2px;
+        border: 2px solid #aab8cd;
+        border-radius: 50%;
+      }
+      .slot-circle:hover { border-color: #9fc2ff; background: #20314c; }
+      .slot-circle img { width: 100%; height: 100%; object-fit: contain; }
+      .slot-circle span { font-size: clamp(18px, 4vw, 32px); }
 
       @container (max-width: 600px) {
         .panel { padding: clamp(1px, .35cqw, 2px); }
@@ -290,6 +346,25 @@
         </div>
         <p id="gallery-error" class="error" role="alert" hidden></p>
         <div id="image-options" class="image-grid"></div>
+        <button id="clear-core" class="group-button" type="button" hidden>清除此格</button>
+      </div>
+    </dialog>
+
+    <dialog id="slot-dialog" aria-labelledby="slot-dialog-title">
+      <div class="dialog-content">
+        <div class="dialog-header">
+          <h2 id="slot-dialog-title">根源灌注</h2>
+          <button id="close-slot-dialog" class="close-button" type="button" autofocus>關閉</button>
+        </div>
+        <div class="slot-options" role="group" aria-label="根源灌注：由左至右對應由下往上的五格">
+          <button class="slot-circle slot-color" type="button" aria-label="第 1 格根源：無" aria-describedby="core-foundation-label" aria-haspopup="dialog" aria-controls="image-dialog"></button>
+          <button class="slot-circle slot-color" type="button" aria-label="第 2 格根源：無" aria-haspopup="dialog" aria-controls="image-dialog"></button>
+          <button class="slot-circle slot-color" type="button" aria-label="第 3 格根源：無" aria-haspopup="dialog" aria-controls="image-dialog"></button>
+          <button class="slot-circle slot-color" type="button" aria-label="第 4 格根源：無" aria-haspopup="dialog" aria-controls="image-dialog"></button>
+          <button class="slot-circle slot-color" type="button" aria-label="第 5 格根源：無" aria-haspopup="dialog" aria-controls="image-dialog"></button>
+          <span id="core-foundation-label" class="slot-label">基石</span>
+        </div>
+        <p id="slot-error" class="error" role="alert" hidden></p>
       </div>
     </dialog>
 
@@ -583,6 +658,15 @@
         { filename: "Netherfish.png", name: "冥魚" },
         { filename: "Spiral.png", name: "天城" },
       ];
+      const coreOptions = [
+        { filename: "Core_Rage.png", name: "Rage", color: "red", colorName: "紅色" },
+        { filename: "Core_Urgen.png", name: "Urgen", color: "blue", colorName: "藍色" },
+        { filename: "Core_Stability.png", name: "Stability", color: "ochre", colorName: "土黃色" },
+        { filename: "Core_Rebirth.png", name: "Rebirth", color: "green", colorName: "綠色" },
+        { filename: "Core_Furnace.png", name: "Furnace", color: "purple", colorName: "紫色" },
+        { filename: "Core_Harmony.png", name: "Harmony", color: "pink", colorName: "桃紅色" },
+      ];
+      const coreSlotCount = 5;
       const shareBaseUrl = "https://howlongbean.github.io/idleheroes.github.io/Cloud/CloudIsland.html";
       const groups = [];
       const groupsContainer = document.getElementById("groups");
@@ -593,6 +677,11 @@
       const markDuplicatesButton = document.getElementById("mark-duplicates");
       const stateError = document.getElementById("state-error");
       const dialog = document.getElementById("image-dialog");
+      const slotDialog = document.getElementById("slot-dialog");
+      const slotDialogTitle = document.getElementById("slot-dialog-title");
+      const slotCircles = Array.from(slotDialog.querySelectorAll(".slot-circle"));
+      const slotError = document.getElementById("slot-error");
+      const clearCoreButton = document.getElementById("clear-core");
       const options = document.getElementById("image-options");
       const galleryError = document.getElementById("gallery-error");
       let nextGroupId = 1;
@@ -601,12 +690,13 @@
       const { invalidateShareUrl, generateShareUrl } = createShareControls({
         baseUrl: shareBaseUrl,
         getState: () => ({
-          version: 3,
+          version: 4,
           groups: groups.map(group => ({
             landlord: group.selectedFile,
             tenants: group.tenantSlots.map(slot => slot.selectedFile),
             nirvana: [...group.nirvana],
             icons: [...group.icons],
+            cores: group.cores.map(selection => [...selection]),
           })),
         }),
         validateState: validateSharedState,
@@ -620,13 +710,21 @@
         markDuplicatesButton.setAttribute("aria-pressed", String(markDuplicates));
         updateDuplicateMarkers();
       });
-      document.getElementById("close-dialog").addEventListener("click", () => dialog.close());
-      dialog.addEventListener("click", (event) => {
-        if (event.target === dialog) dialog.close();
-      });
-      dialog.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          event.preventDefault();
+      for (const [modal, closeButtonId] of [[dialog, "close-dialog"], [slotDialog, "close-slot-dialog"]]) {
+        document.getElementById(closeButtonId).addEventListener("click", () => modal.close());
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) modal.close();
+        });
+        modal.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            modal.close();
+          }
+        });
+      }
+      slotDialog.addEventListener("close", () => {
+        if (dialog.open && options.classList.contains("core-options")
+          && dialog.dataset.groupId === slotDialog.dataset.groupId) {
           dialog.close();
         }
       });
@@ -696,6 +794,22 @@
           iconPicker.append(plus, selectedIcon);
           actions.append(iconPicker);
           panel.append(selectionError);
+
+          const slotPicker = document.createElement("button");
+          slotPicker.type = "button";
+          slotPicker.className = "slot-picker";
+          slotPicker.dataset.label = `第 ${number} 組${heading.textContent}根源灌注`;
+          slotPicker.setAttribute("aria-label", `${slotPicker.dataset.label}：尚未設定`);
+          slotPicker.setAttribute("aria-haspopup", "dialog");
+          slotPicker.setAttribute("aria-controls", "slot-dialog");
+          slotPicker.title = "根源灌注";
+          for (let slot = 0; slot < coreSlotCount; slot++) {
+            const cell = document.createElement("span");
+            cell.className = "slot-cell slot-color";
+            cell.setAttribute("aria-hidden", "true");
+            slotPicker.append(cell);
+          }
+          actions.append(slotPicker);
         });
 
         const picker = element.querySelector(".landlord-picker");
@@ -706,6 +820,7 @@
           selectedLandlordIndex: -1,
           nirvana: Array(tenantConfigurations.length + 1).fill(false),
           icons: Array(tenantConfigurations.length + 1).fill(null),
+          cores: Array.from({ length: tenantConfigurations.length + 1 }, () => Array(coreSlotCount).fill(null)),
           tenantSlots: tenantConfigurations.map((configuration, index) => ({
             ...configuration,
             button: tenantPickers[index],
@@ -715,6 +830,15 @@
 
         element.querySelectorAll(".nirvana-button").forEach((toggle, index) => {
           toggle.addEventListener("click", () => setNirvana(group, index, !group.nirvana[index]));
+        });
+        element.querySelectorAll(".slot-picker").forEach((slotPicker, index) => {
+          slotPicker.addEventListener("click", () => {
+            slotDialog.dataset.groupId = element.id;
+            slotDialog.dataset.panelIndex = String(index);
+            slotDialogTitle.textContent = "根源灌注";
+            renderCoreDialog(group, index);
+            slotDialog.showModal();
+          });
         });
         element.querySelectorAll(".icon-picker").forEach((iconPicker, index) => {
           iconPicker.addEventListener("click", () => {
@@ -776,19 +900,19 @@
 
         const lastGroup = groups[groups.length - 1].element;
         const focusedElement = document.activeElement;
-        const ownsGallery = dialog.dataset.groupId === lastGroup.id;
-        const closesGallery = ownsGallery && dialog.open;
-        if (ownsGallery) {
-          dialog.close();
-          options.replaceChildren();
-          delete dialog.dataset.groupId;
+        const ownedDialogs = [dialog, slotDialog].filter(modal => modal.dataset.groupId === lastGroup.id);
+        const closesDialog = ownedDialogs.some(modal => modal.open);
+        for (const modal of ownedDialogs) {
+          modal.close();
+          delete modal.dataset.groupId;
         }
+        if (ownedDialogs.includes(dialog)) options.replaceChildren();
         lastGroup.remove();
         groups.pop();
         deleteGroupButton.hidden = groups.length <= 1;
         updateDuplicateMarkers();
         invalidateShareUrl();
-        if (closesGallery || lastGroup.contains(focusedElement)
+        if (closesDialog || lastGroup.contains(focusedElement)
           || (deleteGroupButton.hidden && focusedElement === deleteGroupButton)) {
           (deleteGroupButton.hidden ? addGroupButton : deleteGroupButton).focus();
         }
@@ -803,6 +927,10 @@
           group.selectedLandlordIndex = index;
           group.nirvana.forEach((_enabled, pickerIndex) => setNirvana(group, pickerIndex, false));
           group.icons.forEach((_filename, pickerIndex) => selectIcon(group, pickerIndex, null));
+          group.cores.forEach((selection, pickerIndex) => {
+            selection.fill(null);
+            renderCoreSummary(group, pickerIndex);
+          });
           group.tenantSlots.forEach(slot => resetTenant(slot, index));
         }
         updateDuplicateMarkers();
@@ -814,6 +942,8 @@
         if (slot.selectedFile !== filename) {
           setNirvana(group, index + 1, false);
           selectIcon(group, index + 1, null);
+          group.cores[index + 1].fill(null);
+          renderCoreSummary(group, index + 1);
         }
         slot.selectedFile = filename;
         setPreview(slot.button, "Tenant", { filename, name: imageLabel(filename) });
@@ -878,8 +1008,90 @@
         return true;
       }
 
+      function renderCoreSummary(group, panelIndex) {
+        const button = group.element.querySelectorAll(".slot-picker")[panelIndex];
+        const cells = button.querySelectorAll(".slot-cell");
+        const labels = group.cores[panelIndex].map((filename, slotIndex) => {
+          const core = coreOptions.find(option => option.filename === filename);
+          // Circle 0 is the bottom row; circle 4 is the top row.
+          const cell = cells[coreSlotCount - 1 - slotIndex];
+          if (core) {
+            cell.dataset.color = core.color;
+          } else {
+            delete cell.dataset.color;
+          }
+          return `第 ${slotIndex + 1} 格：${core ? `${core.name}（${core.colorName}）` : "無"}`;
+        });
+        const summary = `由下往上，${labels.join("；")}`;
+        button.setAttribute("aria-label", `${button.dataset.label}：${summary}`);
+        button.title = `根源灌注：${summary}`;
+      }
+
+      function renderCoreDialog(group, panelIndex) {
+        slotError.hidden = true;
+        group.cores[panelIndex].forEach((filename, slotIndex) => {
+          const core = coreOptions.find(option => option.filename === filename);
+          const circle = slotCircles[slotIndex];
+          const label = `第 ${slotIndex + 1} 格：${core ? `${core.name}（${core.colorName}）` : "無"}`;
+          circle.setAttribute("aria-label", label);
+          circle.title = label;
+          circle.replaceChildren();
+          if (core) {
+            const image = document.createElement("img");
+            image.alt = "";
+            image.addEventListener("error", () => {
+              if (!image.isConnected) return;
+              slotError.textContent = `無法載入 Icons/${core.filename}，請確認根源圖示存在。`;
+              slotError.hidden = false;
+            });
+            image.src = `./Icons/${core.filename}`;
+            circle.append(image);
+          } else {
+            const placeholder = document.createElement("span");
+            placeholder.textContent = "＋";
+            placeholder.setAttribute("aria-hidden", "true");
+            circle.append(placeholder);
+          }
+          circle.onclick = () => openCoreGallery(group, panelIndex, slotIndex);
+        });
+      }
+
+      function openCoreGallery(group, panelIndex, slotIndex) {
+        const selected = group.cores[panelIndex][slotIndex];
+        dialog.dataset.groupId = group.element.id;
+        openGallery(coreOptions, "Icons", selected, image => selectCore(group, panelIndex, slotIndex, image.filename),
+          `根源灌注：第 ${slotIndex + 1} 格`);
+        document.getElementById("dialog-title").textContent = `第 ${slotIndex + 1} 格：選擇根源`;
+        options.classList.add("core-options");
+        clearCoreButton.hidden = false;
+        clearCoreButton.disabled = selected === null;
+        clearCoreButton.onclick = () => {
+          if (selectCore(group, panelIndex, slotIndex, null)) dialog.close();
+        };
+      }
+
+      function selectCore(group, panelIndex, slotIndex, filename) {
+        if (filename !== null && !coreOptions.some(option => option.filename === filename)) {
+          slotError.textContent = "此根源不存在，請重新開啟清單選擇。";
+          slotError.hidden = false;
+          if (dialog.open) {
+            galleryError.textContent = slotError.textContent;
+            galleryError.hidden = false;
+          }
+          return false;
+        }
+        group.cores[panelIndex][slotIndex] = filename;
+        renderCoreSummary(group, panelIndex);
+        if (slotDialog.open && slotDialog.dataset.groupId === group.element.id
+          && Number(slotDialog.dataset.panelIndex) === panelIndex) {
+          renderCoreDialog(group, panelIndex);
+        }
+        invalidateShareUrl();
+        return true;
+      }
+
       function validateSharedState(state) {
-        if (!state || typeof state !== "object" || Array.isArray(state) || ![1, 2, 3].includes(state.version)) {
+        if (!state || typeof state !== "object" || Array.isArray(state) || ![1, 2, 3, 4].includes(state.version)) {
           throw new SharedStateError("分享設定版本不支援或格式錯誤。");
         }
         if (!Array.isArray(state.groups) || state.groups.length === 0) {
@@ -896,7 +1108,7 @@
             || !savedGroup.nirvana.every(value => typeof value === "boolean"))) {
             throw new SharedStateError(`第 ${index + 1} 組必須包含五個有效的 Nirvana 狀態。`);
           }
-          if (state.version === 3) {
+          if (state.version >= 3) {
             if (!Array.isArray(savedGroup.icons) || savedGroup.icons.length !== tenantConfigurations.length + 1) {
               throw new SharedStateError(`第 ${index + 1} 組必須包含五個圖示位置。`);
             }
@@ -910,6 +1122,14 @@
               }
               usedIcons.add(filename);
             });
+          }
+          if (state.version >= 4 && (!Array.isArray(savedGroup.cores)
+            || savedGroup.cores.length !== tenantConfigurations.length + 1
+            || savedGroup.cores.some(selection => !Array.isArray(selection)
+              || selection.length !== coreSlotCount
+              || selection.some(filename => filename !== null
+                && !coreOptions.some(option => option.filename === filename))))) {
+            throw new SharedStateError(`第 ${index + 1} 組必須包含五個角色各五格的有效根源設定。`);
           }
           const landlordIndex = landlordImages.findIndex(image => image.filename === savedGroup.landlord);
           if (savedGroup.landlord !== null && landlordIndex === -1) {
@@ -928,6 +1148,9 @@
           ...savedGroup,
           nirvana: state.version === 1 ? Array(tenantConfigurations.length + 1).fill(false) : savedGroup.nirvana,
           icons: state.version < 3 ? Array(tenantConfigurations.length + 1).fill(null) : savedGroup.icons,
+          cores: state.version < 4
+            ? Array.from({ length: tenantConfigurations.length + 1 }, () => Array(coreSlotCount).fill(null))
+            : savedGroup.cores,
         }));
       }
 
@@ -956,6 +1179,9 @@
             }
             savedGroup.nirvana.forEach((enabled, index) => setNirvana(group, index, enabled));
             savedGroup.icons.forEach((filename, index) => selectIcon(group, index, filename));
+            savedGroup.cores.forEach((selection, panelIndex) => {
+              selection.forEach((filename, slotIndex) => selectCore(group, panelIndex, slotIndex, filename));
+            });
           }
         } catch (error) {
           if (!(error instanceof SharedStateError)) throw error;
@@ -1013,6 +1239,10 @@
 
       function openGallery(images, folder, selected, onSelect, title = "選擇屋主") {
         options.replaceChildren();
+        options.classList.remove("core-options");
+        clearCoreButton.hidden = true;
+        clearCoreButton.onclick = null;
+        document.getElementById("dialog-title").textContent = "選擇圖片即可套用；按 Esc 可取消。";
         galleryError.hidden = true;
         dialog.setAttribute("aria-label", title);
         images.forEach((entry, index) => {
